@@ -14,6 +14,11 @@ typedef double compute_t;
   PD_CHECK(x.shape().size() == value, #x "'s dim should be " #value ".")
 #define CHECK_INPUT_READY(x) \
   PD_CHECK(x.initialized(), #x " must be initialized before usage.")
+#define CHECK_INPUT_FP64(x)                        \
+  PD_CHECK(x.dtype() == paddle::DataType::FLOAT64, \
+           #x " dtype should be FLOAT64.")
+#define CHECK_INPUT_INT32(x) \
+  PD_CHECK(x.dtype() == paddle::DataType::INT32, #x " dtype should be INT32.")
 template <typename FPTYPE>
 struct NeighborInfo {
   int type;
@@ -30,7 +35,6 @@ struct NeighborInfo {
 
 // int total_atom_num;
 compute_t max_distance = 10000.0;
-
 // template <typename data_t>
 void buildAndSortNeighborList(int i_idx,
                                 const std::vector<compute_t> d_coord3,
@@ -64,17 +68,16 @@ void buildAndSortNeighborList(int i_idx,
   }
 
 
-template <typename data_t>
-void DescrptSeAMaskCPUKernel(int total_atom_num,
+// template <typename data_t>
+void DescrptSeAMaskCPUKernel(int n_descrpt,
+                            int total_atom_num,
                              int nsamples,
-                             const data_t* coord,
+                             const double* coord,
                              const int* type,
                              const int* mask_matrix,
-                             const data_t* box,
-                             const int* mesh,
-                             data_t* descrpt,
-                             data_t* descrpt_deriv,
-                             data_t* rij,
+                             double* descrpt,
+                             double* descrpt_deriv,
+                             double* rij,
                              int* nlist) {
 #pragma omp parallel for
     for (int kk = 0; kk < nsamples; ++kk) {
@@ -85,18 +88,18 @@ void DescrptSeAMaskCPUKernel(int total_atom_num,
       std::vector<compute_t> d_coord3(natoms * 3);
       for (int ii = 0; ii < natoms; ++ii) {
         for (int dd = 0; dd < 3; ++dd) {
-          d_coord3[ii * 3 + dd] = coord(kk, ii * 3 + dd);
+          d_coord3[ii * 3 + dd] = coord[kk*441+ ii * 3 + dd];
         }
       }
 
       std::vector<int> d_type(natoms);
       for (int ii = 0; ii < natoms; ++ii) {
-        d_type[ii] = type(kk, ii);
+        d_type[ii] = type[kk*147+ ii];
       }
 
       std::vector<int> d_mask(natoms);
       for (int ii = 0; ii < natoms; ++ii) {
-        d_mask[ii] = mask_matrix(kk, ii);
+        d_mask[ii] = mask_matrix[kk*147+ ii];
       }
       std::vector<int> sorted_nlist(total_atom_num);
 
@@ -104,20 +107,20 @@ void DescrptSeAMaskCPUKernel(int total_atom_num,
         // Check this atom is virtual atom or not. If it is, set the virtual
         // atom's environment descriptor and derivation on descriptor to be zero
         // directly.
-        if (mask_matrix(kk, ii) == 0) {
+        if (mask_matrix[kk*147+ ii] == 0) {
           for (int jj = 0; jj < natoms * 4; ++jj) {
-            descrpt(kk, ii * total_atom_num * 4 + jj) = 0.;
+            descrpt[kk*total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = 0.;
           }
           for (int jj = 0; jj < natoms * 4 * 3; ++jj) {
-            descrpt_deriv(kk, ii * total_atom_num * 4 * 3 + jj) = 0.;
+            descrpt_deriv[kk*total_atom_num * total_atom_num * n_descrpt * 3+ ii * total_atom_num * 4 * 3 + jj] = 0.;
           }
           // Save the neighbor list relative coordinates with center atom ii.
           for (int jj = 0; jj < natoms * 3; ++jj) {
-            rij(kk, ii * natoms * 3 + jj) = 0.;
+            rij[kk*total_atom_num * total_atom_num * 3+ ii * natoms * 3 + jj] = 0.;
           }
           // Save the neighbor atoms indicies.
           for (int jj = 0; jj < natoms; jj++) {
-            nlist(kk, ii * natoms + jj) = -1;
+            nlist[kk*total_atom_num * total_atom_num+ ii * natoms + jj] = -1;
           }
           continue;
         }
@@ -130,7 +133,7 @@ void DescrptSeAMaskCPUKernel(int total_atom_num,
         // Set the center atom coordinates.
         std::vector<compute_t> rloc(3);
         for (int dd = 0; dd < 3; ++dd) {
-          rloc[dd] = coord(kk, ii * 3 + dd);
+          rloc[dd] = coord[kk*441+ ii * 3 + dd];
         }
 
         // Compute the descriptor and derive for the descriptor for each atom.
@@ -153,7 +156,7 @@ void DescrptSeAMaskCPUKernel(int total_atom_num,
           // Once ii == j_idx, the descriptor and derivation should be set to
           // zero. Or if the atom jj is an virtual atom. The descriptor and
           // derivation should be zero also.
-          if (ii == j_idx || mask_matrix(kk, j_idx) == 0) {
+          if (ii == j_idx || mask_matrix[kk*147+ j_idx] == 0) {
             // 1./rr, cos(theta), cos(phi), sin(phi)
             descrpt_atom[jj * 4 + 0] = 0.;
             descrpt_atom[jj * 4 + 1] = 0.;
@@ -228,19 +231,19 @@ void DescrptSeAMaskCPUKernel(int total_atom_num,
         }
 
         for (int jj = 0; jj < natoms * 4; ++jj) {
-          descrpt(kk, ii * total_atom_num * 4 + jj) = descrpt_atom[jj];
+          descrpt[kk*total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = descrpt_atom[jj];
         }
         for (int jj = 0; jj < natoms * 4 * 3; ++jj) {
-          descrpt_deriv(kk, ii * total_atom_num * 4 * 3 + jj) =
+          descrpt_deriv[kk*total_atom_num * total_atom_num * n_descrpt * 3+ ii * total_atom_num * 4 * 3 + jj] =
               descrpt_deriv_atom[jj];
         }
         // Save the neighbor list relative coordinates with center atom ii.
         for (int jj = 0; jj < natoms * 3; ++jj) {
-          rij(kk, ii * natoms * 3 + jj) = rij_atom[jj];
+          rij[kk*total_atom_num * total_atom_num * 3+ ii * natoms * 3 + jj] = rij_atom[jj];
         }
         // Save the neighbor atoms indicies.
         for (int jj = 0; jj < natoms; ++jj) {
-          nlist(kk, ii * natoms + jj) = sorted_nlist[jj];
+          nlist[kk*total_atom_num * total_atom_num+ ii * natoms + jj] = sorted_nlist[jj];
         }
       }
     }
@@ -261,6 +264,12 @@ std::vector<paddle::Tensor> DescrptSeAMaskCPU(
     CHECK_INPUT(natoms_tensor);
     CHECK_INPUT(mesh_tensor);
 
+    CHECK_INPUT_FP64(coord_tensor);
+    CHECK_INPUT_INT32(type_tensor);
+    CHECK_INPUT_INT32(mask_matrix_tensor);
+    CHECK_INPUT_FP64(box_tensor);
+    CHECK_INPUT_INT32(natoms_tensor);
+    CHECK_INPUT_INT32(mesh_tensor);
     // set size of the sample
     CHECK_INPUT_DIM(coord_tensor, 2);
     CHECK_INPUT_DIM(type_tensor, 2);
@@ -278,7 +287,7 @@ std::vector<paddle::Tensor> DescrptSeAMaskCPU(
     int n_descrpt = 4;
     // int total_atom_num;
     // Calculate the total_atom_num
-    auto natoms = natoms_tensor.data<int>();
+    const int* natoms = natoms_tensor.data<int>();
     int total_atom_num = natoms[1];
     // check the sizes
     PD_CHECK(total_atom_num*3 == coord_tensor.shape()[1], "number of samples should match");
@@ -296,23 +305,43 @@ std::vector<paddle::Tensor> DescrptSeAMaskCPU(
     paddle::Tensor rij_tensor = paddle::empty(
             rij_shape, coord_tensor.dtype(), coord_tensor.place());
     paddle::Tensor nlist_tensor = paddle::empty(
-            nlist_shape, coord_tensor.dtype(), coord_tensor.place());
+            nlist_shape, type_tensor.dtype(), type_tensor.place());
 
-    PD_DISPATCH_FLOATING_TYPES(
-            coord_tensor.type(), "descrpt_se_a_mask_kernel", ([&] {
-                DescrptSeAMaskCPUKernel<data_t>(
+  const double* coord = coord_tensor.data<double>();
+  const int* type = type_tensor.data<int>();
+  const int* mask_matrix = mask_matrix_tensor.data<int>();
+
+  double* descrpt = descrpt_tensor.data<double>();
+  double* descrpt_deriv = descrpt_deriv_tensor.data<double>();
+  double* rij = rij_tensor.data<double>();
+  int* nlist = nlist_tensor.data<int>();
+    DescrptSeAMaskCPUKernel(
+                        n_descrpt,
                         total_atom_num,
                         nsamples,
-                        coord_tensor.data<data_t>(),
-                        type_tensor.data<int>(),
-                        mask_matrix_tensor.data<int>(),
-                        box_tensor.data<data_t>(),
-                        mesh_tensor.data<int>(),
-                        descrpt_tensor.data<data_t>(),
-                        descrpt_deriv_tensor.data<data_t>(),
-                        rij_tensor.data<data_t>(),
-                        nlist_tensor.data<int>());
-            }));
+                        coord,
+                        type,
+                        mask_matrix,
+                        descrpt,
+                        descrpt_deriv,
+                        rij,
+                        nlist);
+    // PD_DISPATCH_FLOATING_TYPES(
+    //         coord_tensor.type(), "descrpt_se_a_mask_kernel", ([&] {
+    //             DescrptSeAMaskCPUKernel<data_t>(
+    //                 n_descrpt,
+    //                     total_atom_num,
+    //                     nsamples,
+    //                     coord,
+    //                     type,
+    //                     mask_matrix,
+    //                     // box_tensor.data<data_t>(),
+    //                     // mesh_tensor.data<int>(),
+    //                     descrpt,
+    //                     descrpt_deriv,
+    //                     rij,
+    //                     nlist);
+    //         }));
 
     return {descrpt_tensor, descrpt_deriv_tensor, rij_tensor, nlist_tensor};
 }

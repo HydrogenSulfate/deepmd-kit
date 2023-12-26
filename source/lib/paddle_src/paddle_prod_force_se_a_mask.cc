@@ -6,14 +6,14 @@
 #define CHECK_INPUT_READY(x) \
   PD_CHECK(x.initialized(), #x " must be initialized before usage.")
 
-template <typename T>
-void ProdForceSeAMaskOpCPUKernel(int nframes,
+template <typename data_t>
+void ProdForceSeAMaskOpForwardCPUKernel(int nframes,
                                  int total_atom_num,
-                                 const T* net_deriv,
-                                 const T* in_deriv,
+                                 const data_t* net_deriv,
+                                 const data_t* in_deriv,
                                  const int* mask,
                                  const int* nlist,
-                                 T* force) {
+                                 data_t* force) {
   int nloc = total_atom_num;
   int nall = total_atom_num;
   int ndescrpt = nall * 4;
@@ -78,7 +78,7 @@ void ProdForceSeAMaskOpCPUKernel(int nframes,
   }
 }
 
-std::vector<paddle::Tensor> ProdForceSeAMaskOpCPUForward(
+std::vector<paddle::Tensor> ProdForceSeAMaskForward(
     const paddle::Tensor& net_deriv_tensor,
     const paddle::Tensor& in_deriv_tensor,
     const paddle::Tensor& mask_tensor,
@@ -116,7 +116,7 @@ std::vector<paddle::Tensor> ProdForceSeAMaskOpCPUForward(
 
   PD_DISPATCH_FLOATING_TYPES(
       net_deriv_tensor.type(), "prod_force_se_a_mask_cpu_forward_kernel", ([&] {
-        ProdForceSeAMaskOpCPUKernel<data_t>(
+        ProdForceSeAMaskOpForwardCPUKernel<data_t>(
             nframes, total_atom_num, net_deriv_tensor.data<data_t>(),
             in_deriv_tensor.data<data_t>(), mask_tensor.data<int>(),
             nlist_tensor.data<int>(), force_tensor.data<data_t>());
@@ -151,6 +151,6 @@ PD_BUILD_OP(prod_force_se_a_mask)
     .Inputs({"net_deriv", "in_deriv", "mask", "nlist"})
     .Attrs({"total_atom_num: int"})
     .Outputs({"force"})
-    .SetKernelFn(PD_KERNEL(ProdForceSeAMaskOpCPUForward))
+    .SetKernelFn(PD_KERNEL(ProdForceSeAMaskForward))
     .SetInferShapeFn(PD_INFER_SHAPE(ProdForceSeAMaskOpInferShape))
     .SetInferDtypeFn(PD_INFER_DTYPE(ProdForceSeAMaskOpInferDtype));
