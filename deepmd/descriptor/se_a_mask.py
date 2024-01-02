@@ -13,6 +13,8 @@ from deepmd.env import GLOBAL_NP_FLOAT_PRECISION
 from deepmd.env import GLOBAL_TF_FLOAT_PRECISION
 from deepmd.env import default_tf_session_config
 from deepmd.env import op_module
+from deepmd.env import paddle
+from deepmd.utils.network import EmbeddingNet  # embedding_net,
 from deepmd.env import tf
 from deepmd.utils.network import embedding_net_rand_seed_shift
 
@@ -115,6 +117,8 @@ class DescrptSeAMask(DescrptSeA):
         precision: str = "default",
         uniform_seed: bool = False,
     ) -> None:
+        paddle.nn.Layer.__init__(self)
+        # super().__init__()
         """Constructor."""
         self.sel_a = sel
         self.total_atom_num = np.cumsum(self.sel_a)[-1]
@@ -154,48 +158,69 @@ class DescrptSeAMask(DescrptSeA):
         self.compress = False
         self.embedding_net_variables = None
         self.mixed_prec = None
-        self.place_holders = {}
+        # self.place_holders = {}
         nei_type = np.array([])
         for ii in range(self.ntypes):
             nei_type = np.append(nei_type, ii * np.ones(self.sel_a[ii]))  # like a mask
-        self.nei_type = tf.constant(nei_type, dtype=tf.int32)
+        # self.nei_type = tf.constant(nei_type, dtype=tf.int32)
+        self.nei_type = paddle.to_tensor(nei_type, dtype="int32")
 
-        avg_zero = np.zeros([self.ntypes, self.ndescrpt]).astype(
-            GLOBAL_NP_FLOAT_PRECISION
-        )
-        std_ones = np.ones([self.ntypes, self.ndescrpt]).astype(
-            GLOBAL_NP_FLOAT_PRECISION
-        )
-        sub_graph = tf.Graph()
-        with sub_graph.as_default():
-            name_pfx = "d_sea_mask_"
-            for ii in ["coord", "box"]:
-                self.place_holders[ii] = tf.placeholder(
-                    GLOBAL_NP_FLOAT_PRECISION, [None, None], name=name_pfx + "t_" + ii
+        nets = []
+        # self._pass_filter => self._filter => self._filter_lower
+        for type_input in range(self.ntypes):
+            layer = []
+            for type_i in range(self.ntypes):
+                layer.append(
+                    EmbeddingNet(
+                        self.filter_neuron,
+                        self.filter_precision,
+                        self.filter_activation_fn,
+                        self.filter_resnet_dt,
+                        self.seed,
+                        self.trainable,
+                        name="filter_type_" + str(type_input) + str(type_i),
+                    )
                 )
-            self.place_holders["type"] = tf.placeholder(
-                tf.int32, [None, None], name=name_pfx + "t_type"
-            )
-            self.place_holders["mask"] = tf.placeholder(
-                tf.int32, [None, None], name=name_pfx + "t_aparam"
-            )  # named aparam for inference compatibility in c++ interface.
+            nets.append(paddle.nn.LayerList(layer))
 
-            self.place_holders["natoms_vec"] = tf.placeholder(
-                tf.int32, [self.ntypes + 2], name=name_pfx + "t_natoms"
-            )  # Not used in se_a_mask. For compatibility with c++ interface.
-            self.place_holders["default_mesh"] = tf.placeholder(
-                tf.int32, [None], name=name_pfx + "t_mesh"
-            )  # Not used in se_a_mask. For compatibility with c++ interface.
+        self.embedding_nets = paddle.nn.LayerList(nets)
 
-            self.stat_descrpt, descrpt_deriv, rij, nlist = op_module.descrpt_se_a_mask(
-                self.place_holders["coord"],
-                self.place_holders["type"],
-                self.place_holders["mask"],
-                self.place_holders["box"],
-                self.place_holders["natoms_vec"],
-                self.place_holders["default_mesh"],
-            )
-        self.sub_sess = tf.Session(graph=sub_graph, config=default_tf_session_config)
+        # avg_zero = np.zeros([self.ntypes, self.ndescrpt]).astype(
+        #     GLOBAL_NP_FLOAT_PRECISION
+        # )
+        # std_ones = np.ones([self.ntypes, self.ndescrpt]).astype(
+        #     GLOBAL_NP_FLOAT_PRECISION
+        # )
+        # sub_graph = tf.Graph()
+        # with sub_graph.as_default():
+        #     name_pfx = "d_sea_mask_"
+        #     for ii in ["coord", "box"]:
+        #         self.place_holders[ii] = tf.placeholder(
+        #             GLOBAL_NP_FLOAT_PRECISION, [None, None], name=name_pfx + "t_" + ii
+        #         )
+        #     self.place_holders["type"] = tf.placeholder(
+        #         tf.int32, [None, None], name=name_pfx + "t_type"
+        #     )
+        #     self.place_holders["mask"] = tf.placeholder(
+        #         tf.int32, [None, None], name=name_pfx + "t_aparam"
+        #     )  # named aparam for inference compatibility in c++ interface.
+
+        #     self.place_holders["natoms_vec"] = tf.placeholder(
+        #         tf.int32, [self.ntypes + 2], name=name_pfx + "t_natoms"
+        #     )  # Not used in se_a_mask. For compatibility with c++ interface.
+        #     self.place_holders["default_mesh"] = tf.placeholder(
+        #         tf.int32, [None], name=name_pfx + "t_mesh"
+        #     )  # Not used in se_a_mask. For compatibility with c++ interface.
+
+        #     self.stat_descrpt, descrpt_deriv, rij, nlist = op_module.descrpt_se_a_mask(
+        #         self.place_holders["coord"],
+        #         self.place_holders["type"],
+        #         self.place_holders["mask"],
+        #         self.place_holders["box"],
+        #         self.place_holders["natoms_vec"],
+        #         self.place_holders["default_mesh"],
+        #     )
+        # self.sub_sess = tf.Session(graph=sub_graph, config=default_tf_session_config)
         self.original_sel = None
 
     def get_rcut(self) -> float:
@@ -237,17 +262,17 @@ class DescrptSeAMask(DescrptSeA):
         self.davg = None
         self.dstd = None
 
-    def build(
+    def forward(
         self,
-        coord_: tf.Tensor,
-        atype_: tf.Tensor,
-        natoms: tf.Tensor,
-        box_: tf.Tensor,
-        mesh: tf.Tensor,
+        coord_: paddle.Tensor,
+        atype_: paddle.Tensor,
+        natoms: paddle.Tensor,
+        box_: paddle.Tensor,
+        mesh: paddle.Tensor,
         input_dict: Dict[str, Any],
         reuse: Optional[bool] = None,
         suffix: str = "",
-    ) -> tf.Tensor:
+    ) -> paddle.Tensor:
         """Build the computational graph for the descriptor.
 
         Parameters
@@ -287,41 +312,49 @@ class DescrptSeAMask(DescrptSeA):
         aparam[:, :] is the real/virtual sign for each atom.
         """
         aparam = input_dict["aparam"]
-        self.mask = tf.cast(aparam, tf.int32)
-        self.mask = tf.reshape(self.mask, [-1, natoms[1]])
 
-        with tf.variable_scope("descrpt_attr" + suffix, reuse=reuse):
-            if davg is None:
-                davg = np.zeros([self.ntypes, self.ndescrpt])
-            if dstd is None:
-                dstd = np.ones([self.ntypes, self.ndescrpt])
-            t_rcut = tf.constant(
-                self.rcut,
-                name="rcut",
-                dtype=GLOBAL_TF_FLOAT_PRECISION,
-            )
-            t_ntypes = tf.constant(self.ntypes, name="ntypes", dtype=tf.int32)
-            t_ndescrpt = tf.constant(self.ndescrpt, name="ndescrpt", dtype=tf.int32)
-            t_sel = tf.constant(self.sel_a, name="sel", dtype=tf.int32)
-            """
-            self.t_avg = tf.get_variable('t_avg',
-                                         davg.shape,
-                                         dtype = GLOBAL_TF_FLOAT_PRECISION,
-                                         trainable = False,
-                                         initializer = tf.constant_initializer(davg))
-            self.t_std = tf.get_variable('t_std',
-                                         dstd.shape,
-                                         dtype = GLOBAL_TF_FLOAT_PRECISION,
-                                         trainable = False,
-                                         initializer = tf.constant_initializer(dstd))
-            """
+        self.mask = paddle.cast(aparam, paddle.int32)
+        self.mask = paddle.reshape(self.mask, [-1, natoms[1]])
+        # with tf.variable_scope("descrpt_attr" + suffix, reuse=reuse):
+        if davg is None:
+            davg = np.zeros([self.ntypes, self.ndescrpt])
+        if dstd is None:
+            dstd = np.ones([self.ntypes, self.ndescrpt])
+            # t_rcut = tf.constant(
+            #     self.rcut,
+            #     name="rcut",
+            #     dtype=GLOBAL_TF_FLOAT_PRECISION,
+            # )
+            # t_ntypes = tf.constant(self.ntypes, name="ntypes", dtype=tf.int32)
+            # t_ndescrpt = tf.constant(self.ndescrpt, name="ndescrpt", dtype=tf.int32)
+            # t_sel = tf.constant(self.sel_a, name="sel", dtype=tf.int32)
+            # """
+            # self.t_avg = tf.get_variable('t_avg',
+            #                              davg.shape,
+            #                              dtype = GLOBAL_TF_FLOAT_PRECISION,
+            #                              trainable = False,
+            #                              initializer = tf.constant_initializer(davg))
+            # self.t_std = tf.get_variable('t_std',
+            #                              dstd.shape,
+            #                              dtype = GLOBAL_TF_FLOAT_PRECISION,
+            #                              trainable = False,
+            #                              initializer = tf.constant_initializer(dstd))
+            # """
 
-        coord = tf.reshape(coord_, [-1, natoms[1] * 3])
-        box_ = tf.reshape(
+        coord = paddle.reshape(coord_, [-1, natoms[1] * 3])
+
+        box_ = paddle.reshape(
             box_, [-1, 9]
         )  # Not used in se_a_mask descriptor. For compatibility in c++ inference.
-        atype = tf.reshape(atype_, [-1, natoms[1]])
-
+        
+        atype = paddle.reshape(atype_, [-1, natoms[1]])
+        
+        coord = paddle.to_tensor(coord, place="cpu")
+        atype = paddle.to_tensor(atype, place="cpu")
+        self.mask = paddle.to_tensor(self.mask, place="cpu")
+        box_ = paddle.to_tensor(box_, place="cpu")
+        natoms = paddle.to_tensor(natoms, place="cpu")
+        mesh = paddle.to_tensor(mesh, place="cpu")
         (
             self.descrpt,
             self.descrpt_deriv,
@@ -329,12 +362,13 @@ class DescrptSeAMask(DescrptSeA):
             self.nlist,
         ) = op_module.descrpt_se_a_mask(coord, atype, self.mask, box_, natoms, mesh)
         # only used when tensorboard was set as true
-        tf.summary.histogram("descrpt", self.descrpt)
-        tf.summary.histogram("rij", self.rij)
-        tf.summary.histogram("nlist", self.nlist)
+        # tf.summary.histogram("descrpt", self.descrpt)
+        # tf.summary.histogram("rij", self.rij)
+        # tf.summary.histogram("nlist", self.nlist)
 
-        self.descrpt_reshape = tf.reshape(self.descrpt, [-1, self.ndescrpt])
-        self._identity_tensors(suffix=suffix)
+        self.descrpt_reshape = paddle.reshape(self.descrpt, [-1, self.ndescrpt])
+        # self._identity_tensors(suffix=suffix)
+        self.descrpt_reshape.stop_gradient = False
 
         self.dout, self.qmat = self._pass_filter(
             self.descrpt_reshape,
@@ -347,14 +381,14 @@ class DescrptSeAMask(DescrptSeA):
         )
 
         # only used when tensorboard was set as true
-        tf.summary.histogram("embedding_net_output", self.dout)
+        # tf.summary.histogram("embedding_net_output", self.dout)
         return self.dout
-
+    
     def prod_force_virial(
         self,
-        atom_ener: tf.Tensor,
-        natoms: tf.Tensor,
-    ) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
+        atom_ener: paddle.Tensor,
+        natoms: paddle.Tensor,
+    ) -> Tuple[paddle.Tensor, paddle.Tensor, paddle.Tensor]:
         """Compute force and virial.
 
         Parameters
@@ -376,9 +410,11 @@ class DescrptSeAMask(DescrptSeA):
         atom_virial
             None for se_a_mask op
         """
-        [net_deriv] = tf.gradients(atom_ener, self.descrpt_reshape)
-        tf.summary.histogram("net_derivative", net_deriv)
-        net_deriv_reshape = tf.reshape(net_deriv, [-1, natoms[0] * self.ndescrpt])
+
+        net_deriv = paddle.grad(atom_ener, self.descrpt_reshape, create_graph=True)[0]
+        # tf.summary.histogram("net_derivative", net_deriv)
+        net_deriv_reshape = paddle.reshape(net_deriv, [-1, natoms[0] * self.ndescrpt])
+        net_deriv_reshape = paddle.to_tensor(net_deriv_reshape, place="cpu")
         force = op_module.prod_force_se_a_mask(
             net_deriv_reshape,
             self.descrpt_deriv,
@@ -387,11 +423,11 @@ class DescrptSeAMask(DescrptSeA):
             total_atom_num=self.total_atom_num,
         )
 
-        tf.summary.histogram("force", force)
+        # tf.summary.histogram("force", force)
 
         # Construct virial and atom virial tensors to avoid reshape errors in model/ener.py
         # They are not used in se_a_mask op
-        virial = tf.zeros([1, 9], dtype=force.dtype)
-        atom_virial = tf.zeros([1, natoms[1], 9], dtype=force.dtype)
+        virial = paddle.zeros([1, 9], dtype=force.dtype)
+        atom_virial = paddle.zeros([1, natoms[1], 9], dtype=force.dtype)
 
         return force, virial, atom_virial

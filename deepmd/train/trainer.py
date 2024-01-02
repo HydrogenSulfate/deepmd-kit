@@ -126,8 +126,12 @@ class DPTrainer:
             descrpt_param["multi_task"] = True
         if descrpt_param["type"] in ["se_e2_a", "se_a", "se_e2_r", "se_r", "hybrid"]:
             descrpt_param["spin"] = self.spin
-        descrpt_param.pop("type")
-        self.descrpt = deepmd.descriptor.se_a.DescrptSeA(**descrpt_param)
+        if descrpt_param["type"]=="se_a_mask":
+            descrpt_param.pop("type")
+            self.descrpt = deepmd.descriptor.se_a_mask.DescrptSeAMask(**descrpt_param)
+        else:
+            descrpt_param.pop("type")
+            self.descrpt = deepmd.descriptor.se_a.DescrptSeA(**descrpt_param)
 
         # fitting net
         if not self.multi_task_mode:
@@ -960,25 +964,54 @@ class DPTrainer:
             # use tensorboard to visualize the training of deepmd-kit
             # it will takes some extra execution time to generate the tensorboard data
             if self.tensorboard and (cur_batch % self.tensorboard_freq == 0):
-                # summary, _, next_train_batch_list = run_sess(
-                #     self.sess,
-                #     [summary_merged_op, batch_train_op, next_train_batch_op],
-                #     feed_dict=train_feed_dict,
-                #     options=prf_options,
-                #     run_metadata=prf_run_metadata,
-                # )
-                # tb_train_writer.add_summary(summary, cur_batch)
-                pass
-                # model_pred = self.model(
-                #     paddle.to_tensor(train_batch["coord"], "float64"),
-                #     paddle.to_tensor(train_batch["type"], "int32"),
-                #     paddle.to_tensor(train_batch["natoms_vec"], "int32", "cpu"),
-                #     paddle.to_tensor(train_batch["box"], "float64"),
-                #     paddle.to_tensor(train_batch["default_mesh"], "int32"),
-                #     train_batch,
-                #     suffix="",
-                #     reuse=False,
-                # )
+                model_inputs = {}
+                for kk in train_batch.keys():
+                    if kk == "find_type" or kk == "type":
+                        continue
+                    prec = "float64"
+                    if "find_" in kk:
+                        model_inputs[kk] = paddle.to_tensor(
+                            train_batch[kk], dtype="float64"
+                        )
+                    else:
+                        model_inputs[kk] = paddle.to_tensor(
+                            np.reshape(train_batch[kk], [-1]), dtype=prec
+                        )
+
+                for ii in ["type"]:
+                    model_inputs[ii] = paddle.to_tensor(
+                        np.reshape(train_batch[ii], [-1]), dtype="int32"
+                    )
+                for ii in ["natoms_vec", "default_mesh"]:
+                    model_inputs[ii] = paddle.to_tensor(train_batch[ii], dtype="int32")
+                model_inputs["is_training"] = paddle.to_tensor(True)
+                model_inputs["natoms_vec"] = paddle.to_tensor(
+                    model_inputs["natoms_vec"], place="cpu"
+                )
+                model_pred = self.model(
+                    model_inputs["coord"],
+                    model_inputs["type"],
+                    model_inputs["natoms_vec"],
+                    model_inputs["box"],
+                    model_inputs["default_mesh"],
+                    model_inputs,
+                    suffix="",
+                    reuse=False,
+                )
+                # print(f"{self.cur_batch} {self.learning_rate.get_lr():.10f}")
+                l2_l, l2_more = self.loss.compute_loss(
+                    self.learning_rate.get_lr(),
+                    model_inputs["natoms_vec"],
+                    model_pred,
+                    model_inputs,
+                    suffix="train",
+                )
+
+                self.optimizer.clear_grad()
+                l2_l.backward()
+                self.optimizer.step()
+                self.global_step += 1
+
             else:
                 """
                 find_box:0", dtype=float32) ()

@@ -21,56 +21,54 @@ typedef double compute_t;
   PD_CHECK(x.dtype() == paddle::DataType::INT32, #x " dtype should be INT32.")
 template <typename FPTYPE>
 struct NeighborInfo {
-  int type;
-  FPTYPE dist;
-  int index;
-  NeighborInfo() : type(0), dist(0), index(0) {}
-  NeighborInfo(int tt, FPTYPE dd, int ii) : type(tt), dist(dd), index(ii) {}
-  bool operator<(const NeighborInfo &b) const {
-    return (type < b.type ||
-            (type == b.type &&
-             (dist < b.dist || (dist == b.dist && index < b.index))));
-  }
+    int type;
+    FPTYPE dist;
+    int index;
+    NeighborInfo() : type(0), dist(0), index(0) {}
+    NeighborInfo(int tt, FPTYPE dd, int ii) : type(tt), dist(dd), index(ii) {}
+    bool operator<(const NeighborInfo &b) const {
+        return (type < b.type ||
+                (type == b.type &&
+                 (dist < b.dist || (dist == b.dist && index < b.index))));
+    }
 };
 
-// int total_atom_num;
 compute_t max_distance = 10000.0;
-// template <typename data_t>
+
 void buildAndSortNeighborList(int i_idx,
-                                const std::vector<compute_t> d_coord3,
-                                std::vector<int> &d_type,
-                                std::vector<int> &d_mask,
-                                std::vector<int> &sorted_nlist,
-                                int total_atom_num) {
+                              const std::vector<compute_t> d_coord3,
+                              std::vector<int> &d_type,
+                              std::vector<int> &d_mask,
+                              std::vector<int> &sorted_nlist,
+                              int total_atom_num) {
     // sorted_nlist.resize(total_atom_num);
     std::vector<NeighborInfo<double>> sel_nei;
     for (int jj = 0; jj < total_atom_num; jj++) {
-      compute_t diff[3];
-      const int j_idx = jj;
-      for (int dd = 0; dd < 3; ++dd) {
-        diff[dd] = d_coord3[j_idx * 3 + dd] - d_coord3[i_idx * 3 + dd];
-      }
-      // Check if j_idx atom is virtual particle or not.
-      compute_t rr = 0.0;
-      if (d_mask[j_idx] == 0 || j_idx == i_idx) {
-        rr = max_distance;
-      } else {
-        rr = sqrt(deepmd::dot3<compute_t>(diff, diff));
-      }
-      sel_nei.push_back(NeighborInfo<double>(d_type[j_idx], rr, j_idx));
+        compute_t diff[3];
+        const int j_idx = jj;
+        for (int dd = 0; dd < 3; ++dd) {
+            diff[dd] = d_coord3[j_idx * 3 + dd] - d_coord3[i_idx * 3 + dd];
+        }
+        // Check if j_idx atom is virtual particle or not.
+        compute_t rr = 0.0;
+        if (d_mask[j_idx] == 0 || j_idx == i_idx) {
+            rr = max_distance;
+        } else {
+            rr = sqrt(deepmd::dot3<compute_t>(diff, diff));
+        }
+        sel_nei.push_back(NeighborInfo<double>(d_type[j_idx], rr, j_idx));
     }
     std::sort(sel_nei.begin(), sel_nei.end());
     // Save the sorted atom index.
     for (int jj = 0; jj < sel_nei.size(); jj++) {
-      int atom_idx = sel_nei[jj].index;
-      sorted_nlist[jj] = atom_idx;
+        int atom_idx = sel_nei[jj].index;
+        sorted_nlist[jj] = atom_idx;
     }
-  }
+}
 
 
-// template <typename data_t>
 void DescrptSeAMaskCPUKernel(int n_descrpt,
-                            int total_atom_num,
+                             int total_atom_num,
                              int nsamples,
                              const double* coord,
                              const int* type,
@@ -81,173 +79,173 @@ void DescrptSeAMaskCPUKernel(int n_descrpt,
                              int* nlist) {
 #pragma omp parallel for
     for (int kk = 0; kk < nsamples; ++kk) {
-      // Iterate for each frame.
-      int nloc = total_atom_num;
-      int natoms = total_atom_num;
+        // Iterate for each frame.
+        int nloc = total_atom_num;
+        int natoms = total_atom_num;
 
-      std::vector<compute_t> d_coord3(natoms * 3);
-      for (int ii = 0; ii < natoms; ++ii) {
-        for (int dd = 0; dd < 3; ++dd) {
-          d_coord3[ii * 3 + dd] = coord[kk*441+ ii * 3 + dd];
-        }
-      }
-
-      std::vector<int> d_type(natoms);
-      for (int ii = 0; ii < natoms; ++ii) {
-        d_type[ii] = type[kk*147+ ii];
-      }
-
-      std::vector<int> d_mask(natoms);
-      for (int ii = 0; ii < natoms; ++ii) {
-        d_mask[ii] = mask_matrix[kk*147+ ii];
-      }
-      std::vector<int> sorted_nlist(total_atom_num);
-
-      for (int ii = 0; ii < nloc; ii++) {
-        // Check this atom is virtual atom or not. If it is, set the virtual
-        // atom's environment descriptor and derivation on descriptor to be zero
-        // directly.
-        if (mask_matrix[kk*147+ ii] == 0) {
-          for (int jj = 0; jj < natoms * 4; ++jj) {
-            descrpt[kk*total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = 0.;
-          }
-          for (int jj = 0; jj < natoms * 4 * 3; ++jj) {
-            descrpt_deriv[kk*total_atom_num * total_atom_num * n_descrpt * 3+ ii * total_atom_num * 4 * 3 + jj] = 0.;
-          }
-          // Save the neighbor list relative coordinates with center atom ii.
-          for (int jj = 0; jj < natoms * 3; ++jj) {
-            rij[kk*total_atom_num * total_atom_num * 3+ ii * natoms * 3 + jj] = 0.;
-          }
-          // Save the neighbor atoms indicies.
-          for (int jj = 0; jj < natoms; jj++) {
-            nlist[kk*total_atom_num * total_atom_num+ ii * natoms + jj] = -1;
-          }
-          continue;
+        std::vector<compute_t> d_coord3(natoms * 3);
+        for (int ii = 0; ii < natoms; ++ii) {
+            for (int dd = 0; dd < 3; ++dd) {
+                d_coord3[ii * 3 + dd] = coord[kk * total_atom_num * 3 + ii * 3 + dd];
+            }
         }
 
-        // Build the neighbor list for atom ii.
-        std::fill(sorted_nlist.begin(), sorted_nlist.end(), -1);
-        buildAndSortNeighborList(ii, d_coord3, d_type, d_mask, sorted_nlist,
-                                 total_atom_num);
-
-        // Set the center atom coordinates.
-        std::vector<compute_t> rloc(3);
-        for (int dd = 0; dd < 3; ++dd) {
-          rloc[dd] = coord[kk*441+ ii * 3 + dd];
+        std::vector<int> d_type(natoms);
+        for (int ii = 0; ii < natoms; ++ii) {
+            d_type[ii] = type[kk * total_atom_num + ii];
         }
 
-        // Compute the descriptor and derive for the descriptor for each atom.
-        std::vector<compute_t> descrpt_atom(natoms * 4);
-        std::vector<compute_t> descrpt_deriv_atom(natoms * 12);
-        std::vector<compute_t> rij_atom(natoms * 3);
-
-        std::fill(descrpt_deriv_atom.begin(), descrpt_deriv_atom.end(), 0.0);
-        std::fill(descrpt_atom.begin(), descrpt_atom.end(), 0.0);
-        std::fill(rij_atom.begin(), rij_atom.end(), 0.0);
-
-        // Compute the each environment std::vector for each atom.
-        for (int jj = 0; jj < natoms; jj++) {
-          int j_idx = sorted_nlist[jj];
-
-          compute_t temp_rr;
-          compute_t temp_diff[3];
-          temp_rr = 0.;
-
-          // Once ii == j_idx, the descriptor and derivation should be set to
-          // zero. Or if the atom jj is an virtual atom. The descriptor and
-          // derivation should be zero also.
-          if (ii == j_idx || mask_matrix[kk*147+ j_idx] == 0) {
-            // 1./rr, cos(theta), cos(phi), sin(phi)
-            descrpt_atom[jj * 4 + 0] = 0.;
-            descrpt_atom[jj * 4 + 1] = 0.;
-            descrpt_atom[jj * 4 + 2] = 0.;
-            descrpt_atom[jj * 4 + 3] = 0.;
-            // derive of the component 1/r
-            descrpt_deriv_atom[jj * 12 + 0] = 0.;
-            descrpt_deriv_atom[jj * 12 + 1] = 0.;
-            descrpt_deriv_atom[jj * 12 + 2] = 0.;
-            // derive of the component x/r2
-            descrpt_deriv_atom[jj * 12 + 3] = 0.;  // on x.
-            descrpt_deriv_atom[jj * 12 + 4] = 0.;  // on y.
-            descrpt_deriv_atom[jj * 12 + 5] = 0.;  // on z.
-            // derive of the component y/r2
-            descrpt_deriv_atom[jj * 12 + 6] = 0.;  // on x.
-            descrpt_deriv_atom[jj * 12 + 7] = 0.;  // on y.
-            descrpt_deriv_atom[jj * 12 + 8] = 0.;  // on z.
-            // derive of the component z/r2
-            descrpt_deriv_atom[jj * 12 + 9] = 0.;   // on x.
-            descrpt_deriv_atom[jj * 12 + 10] = 0.;  // on y.
-            descrpt_deriv_atom[jj * 12 + 11] = 0.;  // on z.
-            rij_atom[jj * 3 + 0] = 0.;
-            rij_atom[jj * 3 + 1] = 0.;
-            rij_atom[jj * 3 + 2] = 0.;
-            continue;
-          }
-
-          for (int dd = 0; dd < 3; dd++) {
-            temp_diff[dd] = d_coord3[j_idx * 3 + dd] - rloc[dd];
-            rij_atom[jj * 3 + dd] = temp_diff[dd];
-          }
-
-          temp_rr = deepmd::dot3<compute_t>(temp_diff, temp_diff);
-
-          compute_t x = temp_diff[0];
-          compute_t y = temp_diff[1];
-          compute_t z = temp_diff[2];
-
-          // r^2
-          compute_t nr2 = temp_rr;
-          // 1/r
-          compute_t inr = 1. / sqrt(nr2);
-          // r
-          compute_t nr = nr2 * inr;
-          // 1/r^2
-          compute_t inr2 = inr * inr;
-          // 1/r^4
-          compute_t inr4 = inr2 * inr2;
-          // 1/r^3
-          compute_t inr3 = inr * inr2;
-          // 1./rr, cos(theta), cos(phi), sin(phi)
-          descrpt_atom[jj * 4 + 0] = 1. / nr;
-          descrpt_atom[jj * 4 + 1] = x / nr2;
-          descrpt_atom[jj * 4 + 2] = y / nr2;
-          descrpt_atom[jj * 4 + 3] = z / nr2;
-          // derive of the component 1/r
-          descrpt_deriv_atom[jj * 12 + 0] = x * inr3;
-          descrpt_deriv_atom[jj * 12 + 1] = y * inr3;
-          descrpt_deriv_atom[jj * 12 + 2] = z * inr3;
-          // derive of the component x/r2
-          descrpt_deriv_atom[jj * 12 + 3] = 2. * x * x * inr4 - inr2;  // on x.
-          descrpt_deriv_atom[jj * 12 + 4] = 2. * x * y * inr4;         // on y.
-          descrpt_deriv_atom[jj * 12 + 5] = 2. * x * z * inr4;         // on z.
-          // derive of the component y/r2
-          descrpt_deriv_atom[jj * 12 + 6] = 2. * y * x * inr4;         // on x.
-          descrpt_deriv_atom[jj * 12 + 7] = 2. * y * y * inr4 - inr2;  // on y.
-          descrpt_deriv_atom[jj * 12 + 8] = 2. * y * z * inr4;         // on z.
-          // derive of the component z/r2
-          descrpt_deriv_atom[jj * 12 + 9] = 2. * z * x * inr4;          // on x.
-          descrpt_deriv_atom[jj * 12 + 10] = 2. * z * y * inr4;         // on y.
-          descrpt_deriv_atom[jj * 12 + 11] = 2. * z * z * inr4 - inr2;  // on z.
+        std::vector<int> d_mask(natoms);
+        for (int ii = 0; ii < natoms; ++ii) {
+            d_mask[ii] = mask_matrix[kk * total_atom_num + ii];
         }
+        std::vector<int> sorted_nlist(total_atom_num);
 
-        for (int jj = 0; jj < natoms * 4; ++jj) {
-          descrpt[kk*total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = descrpt_atom[jj];
+        for (int ii = 0; ii < nloc; ii++) {
+            // Check this atom is virtual atom or not. If it is, set the virtual
+            // atom's environment descriptor and derivation on descriptor to be zero
+            // directly.
+            if (mask_matrix[kk*total_atom_num+ ii] == 0) {
+                for (int jj = 0; jj < natoms * 4; ++jj) {
+                    descrpt[kk*total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = 0.;
+                }
+                for (int jj = 0; jj < natoms * 4 * 3; ++jj) {
+                    descrpt_deriv[kk*total_atom_num * total_atom_num * n_descrpt * 3+ ii * total_atom_num * 4 * 3 + jj] = 0.;
+                }
+                // Save the neighbor list relative coordinates with center atom ii.
+                for (int jj = 0; jj < natoms * 3; ++jj) {
+                    rij[kk*total_atom_num * total_atom_num * 3+ ii * natoms * 3 + jj] = 0.;
+                }
+                // Save the neighbor atoms indicies.
+                for (int jj = 0; jj < natoms; jj++) {
+                    nlist[kk*total_atom_num * total_atom_num+ ii * natoms + jj] = -1;
+                }
+                continue;
+            }
+
+            // Build the neighbor list for atom ii.
+            std::fill(sorted_nlist.begin(), sorted_nlist.end(), -1);
+            buildAndSortNeighborList(ii, d_coord3, d_type, d_mask, sorted_nlist,
+                                     total_atom_num);
+
+            // Set the center atom coordinates.
+            std::vector<compute_t> rloc(3);
+            for (int dd = 0; dd < 3; ++dd) {
+                rloc[dd] = coord[kk * total_atom_num * 3 + ii * 3 + dd];
+            }
+
+            // Compute the descriptor and derive for the descriptor for each atom.
+            std::vector<compute_t> descrpt_atom(natoms * 4);
+            std::vector<compute_t> descrpt_deriv_atom(natoms * 12);
+            std::vector<compute_t> rij_atom(natoms * 3);
+
+            std::fill(descrpt_deriv_atom.begin(), descrpt_deriv_atom.end(), 0.0);
+            std::fill(descrpt_atom.begin(), descrpt_atom.end(), 0.0);
+            std::fill(rij_atom.begin(), rij_atom.end(), 0.0);
+
+            // Compute the each environment std::vector for each atom.
+            for (int jj = 0; jj < natoms; jj++) {
+                int j_idx = sorted_nlist[jj];
+
+                compute_t temp_rr;
+                compute_t temp_diff[3];
+                temp_rr = 0.;
+
+                // Once ii == j_idx, the descriptor and derivation should be set to
+                // zero. Or if the atom jj is an virtual atom. The descriptor and
+                // derivation should be zero also.
+                if (ii == j_idx || mask_matrix[kk*total_atom_num+ j_idx] == 0) {
+                    // 1./rr, cos(theta), cos(phi), sin(phi)
+                    descrpt_atom[jj * 4 + 0] = 0.;
+                    descrpt_atom[jj * 4 + 1] = 0.;
+                    descrpt_atom[jj * 4 + 2] = 0.;
+                    descrpt_atom[jj * 4 + 3] = 0.;
+                    // derive of the component 1/r
+                    descrpt_deriv_atom[jj * 12 + 0] = 0.;
+                    descrpt_deriv_atom[jj * 12 + 1] = 0.;
+                    descrpt_deriv_atom[jj * 12 + 2] = 0.;
+                    // derive of the component x/r2
+                    descrpt_deriv_atom[jj * 12 + 3] = 0.;  // on x.
+                    descrpt_deriv_atom[jj * 12 + 4] = 0.;  // on y.
+                    descrpt_deriv_atom[jj * 12 + 5] = 0.;  // on z.
+                    // derive of the component y/r2
+                    descrpt_deriv_atom[jj * 12 + 6] = 0.;  // on x.
+                    descrpt_deriv_atom[jj * 12 + 7] = 0.;  // on y.
+                    descrpt_deriv_atom[jj * 12 + 8] = 0.;  // on z.
+                    // derive of the component z/r2
+                    descrpt_deriv_atom[jj * 12 + 9] = 0.;   // on x.
+                    descrpt_deriv_atom[jj * 12 + 10] = 0.;  // on y.
+                    descrpt_deriv_atom[jj * 12 + 11] = 0.;  // on z.
+                    rij_atom[jj * 3 + 0] = 0.;
+                    rij_atom[jj * 3 + 1] = 0.;
+                    rij_atom[jj * 3 + 2] = 0.;
+                    continue;
+                }
+
+                for (int dd = 0; dd < 3; dd++) {
+                    temp_diff[dd] = d_coord3[j_idx * 3 + dd] - rloc[dd];
+                    rij_atom[jj * 3 + dd] = temp_diff[dd];
+                }
+
+                temp_rr = deepmd::dot3<compute_t>(temp_diff, temp_diff);
+
+                compute_t x = temp_diff[0];
+                compute_t y = temp_diff[1];
+                compute_t z = temp_diff[2];
+
+                // r^2
+                compute_t nr2 = temp_rr;
+                // 1/r
+                compute_t inr = 1. / sqrt(nr2);
+                // r
+                compute_t nr = nr2 * inr;
+                // 1/r^2
+                compute_t inr2 = inr * inr;
+                // 1/r^4
+                compute_t inr4 = inr2 * inr2;
+                // 1/r^3
+                compute_t inr3 = inr * inr2;
+                // 1./rr, cos(theta), cos(phi), sin(phi)
+                descrpt_atom[jj * 4 + 0] = 1. / nr;
+                descrpt_atom[jj * 4 + 1] = x / nr2;
+                descrpt_atom[jj * 4 + 2] = y / nr2;
+                descrpt_atom[jj * 4 + 3] = z / nr2;
+                // derive of the component 1/r
+                descrpt_deriv_atom[jj * 12 + 0] = x * inr3;
+                descrpt_deriv_atom[jj * 12 + 1] = y * inr3;
+                descrpt_deriv_atom[jj * 12 + 2] = z * inr3;
+                // derive of the component x/r2
+                descrpt_deriv_atom[jj * 12 + 3] = 2. * x * x * inr4 - inr2;  // on x.
+                descrpt_deriv_atom[jj * 12 + 4] = 2. * x * y * inr4;         // on y.
+                descrpt_deriv_atom[jj * 12 + 5] = 2. * x * z * inr4;         // on z.
+                // derive of the component y/r2
+                descrpt_deriv_atom[jj * 12 + 6] = 2. * y * x * inr4;         // on x.
+                descrpt_deriv_atom[jj * 12 + 7] = 2. * y * y * inr4 - inr2;  // on y.
+                descrpt_deriv_atom[jj * 12 + 8] = 2. * y * z * inr4;         // on z.
+                // derive of the component z/r2
+                descrpt_deriv_atom[jj * 12 + 9] = 2. * z * x * inr4;          // on x.
+                descrpt_deriv_atom[jj * 12 + 10] = 2. * z * y * inr4;         // on y.
+                descrpt_deriv_atom[jj * 12 + 11] = 2. * z * z * inr4 - inr2;  // on z.
+            }
+
+            for (int jj = 0; jj < natoms * 4; ++jj) {
+                descrpt[kk*total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = descrpt_atom[jj];
+            }
+            for (int jj = 0; jj < natoms * 4 * 3; ++jj) {
+                descrpt_deriv[kk*total_atom_num * total_atom_num * n_descrpt * 3+ ii * total_atom_num * 4 * 3 + jj] =
+                        descrpt_deriv_atom[jj];
+            }
+            // Save the neighbor list relative coordinates with center atom ii.
+            for (int jj = 0; jj < natoms * 3; ++jj) {
+                rij[kk*total_atom_num * total_atom_num * 3+ ii * natoms * 3 + jj] = rij_atom[jj];
+            }
+            // Save the neighbor atoms indicies.
+            for (int jj = 0; jj < natoms; ++jj) {
+                nlist[kk*total_atom_num * total_atom_num+ ii * natoms + jj] = sorted_nlist[jj];
+            }
         }
-        for (int jj = 0; jj < natoms * 4 * 3; ++jj) {
-          descrpt_deriv[kk*total_atom_num * total_atom_num * n_descrpt * 3+ ii * total_atom_num * 4 * 3 + jj] =
-              descrpt_deriv_atom[jj];
-        }
-        // Save the neighbor list relative coordinates with center atom ii.
-        for (int jj = 0; jj < natoms * 3; ++jj) {
-          rij[kk*total_atom_num * total_atom_num * 3+ ii * natoms * 3 + jj] = rij_atom[jj];
-        }
-        // Save the neighbor atoms indicies.
-        for (int jj = 0; jj < natoms; ++jj) {
-          nlist[kk*total_atom_num * total_atom_num+ ii * natoms + jj] = sorted_nlist[jj];
-        }
-      }
     }
-  }
+}
 
 std::vector<paddle::Tensor> DescrptSeAMaskCPU(
         const paddle::Tensor& coord_tensor,
@@ -307,41 +305,25 @@ std::vector<paddle::Tensor> DescrptSeAMaskCPU(
     paddle::Tensor nlist_tensor = paddle::empty(
             nlist_shape, type_tensor.dtype(), type_tensor.place());
 
-  const double* coord = coord_tensor.data<double>();
-  const int* type = type_tensor.data<int>();
-  const int* mask_matrix = mask_matrix_tensor.data<int>();
+    const double* coord = coord_tensor.data<double>();
+    const int* type = type_tensor.data<int>();
+    const int* mask_matrix = mask_matrix_tensor.data<int>();
 
-  double* descrpt = descrpt_tensor.data<double>();
-  double* descrpt_deriv = descrpt_deriv_tensor.data<double>();
-  double* rij = rij_tensor.data<double>();
-  int* nlist = nlist_tensor.data<int>();
+    double* descrpt = descrpt_tensor.data<double>();
+    double* descrpt_deriv = descrpt_deriv_tensor.data<double>();
+    double* rij = rij_tensor.data<double>();
+    int* nlist = nlist_tensor.data<int>();
     DescrptSeAMaskCPUKernel(
-                        n_descrpt,
-                        total_atom_num,
-                        nsamples,
-                        coord,
-                        type,
-                        mask_matrix,
-                        descrpt,
-                        descrpt_deriv,
-                        rij,
-                        nlist);
-    // PD_DISPATCH_FLOATING_TYPES(
-    //         coord_tensor.type(), "descrpt_se_a_mask_kernel", ([&] {
-    //             DescrptSeAMaskCPUKernel<data_t>(
-    //                 n_descrpt,
-    //                     total_atom_num,
-    //                     nsamples,
-    //                     coord,
-    //                     type,
-    //                     mask_matrix,
-    //                     // box_tensor.data<data_t>(),
-    //                     // mesh_tensor.data<int>(),
-    //                     descrpt,
-    //                     descrpt_deriv,
-    //                     rij,
-    //                     nlist);
-    //         }));
+            n_descrpt,
+            total_atom_num,
+            nsamples,
+            coord,
+            type,
+            mask_matrix,
+            descrpt,
+            descrpt_deriv,
+            rij,
+            nlist);
 
     return {descrpt_tensor, descrpt_deriv_tensor, rij_tensor, nlist_tensor};
 }
@@ -367,4 +349,3 @@ PD_BUILD_OP(descrpt_se_a_mask)
 .Inputs({"coord", "type", "mask", "box", "natoms", "mesh"})
 .Outputs({"descrpt", "descrpt_deriv", "rij", "nlist"})
 .SetKernelFn(PD_KERNEL(DescrptSeAMask));
-
