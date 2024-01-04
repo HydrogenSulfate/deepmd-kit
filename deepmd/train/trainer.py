@@ -964,77 +964,8 @@ class DPTrainer:
             # use tensorboard to visualize the training of deepmd-kit
             # it will takes some extra execution time to generate the tensorboard data
             if self.tensorboard and (cur_batch % self.tensorboard_freq == 0):
-                model_inputs = {}
-                for kk in train_batch.keys():
-                    if kk == "find_type" or kk == "type":
-                        continue
-                    prec = "float64"
-                    if "find_" in kk:
-                        model_inputs[kk] = paddle.to_tensor(
-                            train_batch[kk], dtype="float64"
-                        )
-                    else:
-                        model_inputs[kk] = paddle.to_tensor(
-                            np.reshape(train_batch[kk], [-1]), dtype=prec
-                        )
-
-                for ii in ["type"]:
-                    model_inputs[ii] = paddle.to_tensor(
-                        np.reshape(train_batch[ii], [-1]), dtype="int32"
-                    )
-                for ii in ["natoms_vec", "default_mesh"]:
-                    model_inputs[ii] = paddle.to_tensor(train_batch[ii], dtype="int32")
-                model_inputs["is_training"] = paddle.to_tensor(True)
-                model_inputs["natoms_vec"] = paddle.to_tensor(
-                    model_inputs["natoms_vec"], place="cpu"
-                )
-                model_pred = self.model(
-                    model_inputs["coord"],
-                    model_inputs["type"],
-                    model_inputs["natoms_vec"],
-                    model_inputs["box"],
-                    model_inputs["default_mesh"],
-                    model_inputs,
-                    suffix="",
-                    reuse=False,
-                )
-                # print(f"{self.cur_batch} {self.learning_rate.get_lr():.10f}")
-                l2_l, l2_more = self.loss.compute_loss(
-                    self.learning_rate.get_lr(),
-                    model_inputs["natoms_vec"],
-                    model_pred,
-                    model_inputs,
-                    suffix="train",
-                )
-
-                self.optimizer.clear_grad()
-                l2_l.backward()
-                self.optimizer.step()
-                self.global_step += 1
-
+                pass
             else:
-                """
-                find_box:0", dtype=float32) ()
-                find_coord:0", dtype=float32) ()
-                find_numb_copy:0", dtype=float32) ()
-                find_energy:0", dtype=float32) ()
-                find_force:0", dtype=float32) ()
-                find_virial:0", dtype=float32) ()
-                find_atom_ener:0", dtype=float32) ()
-                find_atom_pref:0", dtype=float32) ()
-                box:0", shape=(?,), dtype=float64) (9,)
-                coord:0", shape=(?,), dtype=float64) (576,)
-                numb_copy:0", shape=(?,), dtype=float64) (1,)
-                energy:0", shape=(?,), dtype=float64) (1,)
-                force:0", shape=(?,), dtype=float64) (576,)
-                virial:0", shape=(?,), dtype=float64) (9,)
-                atom_ener:0", shape=(?,), dtype=float64) (192,)
-                atom_pref:0", shape=(?,), dtype=float64) (576,)
-                natoms:0", shape=(4,), dtype=int32) (4,)
-                mesh:0", shape=(?,), dtype=int32) (6,)
-                type:0", shape=(?,), dtype=int32) (192,)
-                aceholder:0", dtype=bool) True
-                """
                 model_inputs = {}
                 for kk in train_batch.keys():
                     if kk == "find_type" or kk == "type":
