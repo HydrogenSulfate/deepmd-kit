@@ -10,13 +10,13 @@ import numpy as np
 from deepmd.common import get_activation_func
 from deepmd.common import get_precision
 from deepmd.env import GLOBAL_NP_FLOAT_PRECISION
-from deepmd.env import GLOBAL_TF_FLOAT_PRECISION
 from deepmd.env import GLOBAL_PD_FLOAT_PRECISION
+from deepmd.env import GLOBAL_TF_FLOAT_PRECISION
 from deepmd.env import default_tf_session_config
 from deepmd.env import op_module
 from deepmd.env import paddle
-from deepmd.utils.network import EmbeddingNet  # embedding_net,
 from deepmd.env import tf
+from deepmd.utils.network import EmbeddingNet  # embedding_net,
 from deepmd.utils.network import embedding_net_rand_seed_shift
 
 from .descriptor import Descriptor
@@ -193,7 +193,7 @@ class DescrptSeAMask(paddle.nn.Layer):
     def get_ntypes(self) -> int:
         """Returns the number of atom types."""
         return self.ntypes
-    
+
     def get_dim_out(self) -> int:
         """Returns the output dimension of this descriptor."""
         return self.filter_neuron[-1] * self.n_axis_neuron
@@ -406,7 +406,7 @@ class DescrptSeAMask(paddle.nn.Layer):
         atom_virial = paddle.zeros([1, natoms[1], 9], dtype=force.dtype)
 
         return force, virial, atom_virial
-    
+
     def _pass_filter(
         self, inputs, atype, natoms, input_dict, reuse=None, suffix="", trainable=True
     ):
@@ -522,7 +522,7 @@ class DescrptSeAMask(paddle.nn.Layer):
         output = paddle.concat(output, axis=1)
         output_qmat = paddle.concat(output_qmat, axis=1)
         return output, output_qmat
-    
+
     def _filter_lower(
         self,
         type_i: int,  # inner-loop
@@ -768,4 +768,3 @@ class DescrptSeAMask(paddle.nn.Layer):
         result = paddle.reshape(result, [-1, outputs_size_2 * outputs_size[-1]])
 
         return result, qmat
-    
