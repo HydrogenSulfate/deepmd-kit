@@ -231,7 +231,13 @@ class EnerFitting(nn.Layer):
                 else:
                     type_i_layers.append(
                         OneLayer_deepmd(
-                            self.dim_descrpt + self.numb_fparam + (self.numb_aparam if self.use_aparam_as_mask==False else 0),
+                            self.dim_descrpt
+                            + self.numb_fparam
+                            + (
+                                self.numb_aparam
+                                if self.use_aparam_as_mask == False
+                                else 0
+                            ),
                             self.n_neuron[ii],
                             activation_fn=self.fitting_activation_fn,
                             precision=self.fitting_precision,
@@ -719,7 +725,10 @@ class EnerFitting(nn.Layer):
         # add bias
         self.atom_ener_before = outs * atype_filter
         self.add_type = paddle.reshape(
-            paddle.nn.functional.embedding(self.atype_nloc, self.t_bias_atom_e.reshape([self.t_bias_atom_e.shape[0], -1])),
+            paddle.nn.functional.embedding(
+                self.atype_nloc,
+                self.t_bias_atom_e.reshape([self.t_bias_atom_e.shape[0], -1]),
+            ),
             [paddle.shape(inputs)[0], paddle.sum(natoms[2 : 2 + ntypes_atom]).item()],
         )
         outs = outs + self.add_type  # 类型编码(类似于transformer的位置编码，每种类型自己有一个特征，加到原特征上)

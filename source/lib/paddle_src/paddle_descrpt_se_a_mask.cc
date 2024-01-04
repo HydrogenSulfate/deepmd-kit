@@ -14,9 +14,6 @@ typedef double compute_t;
   PD_CHECK(x.shape().size() == value, #x "'s dim should be " #value ".")
 #define CHECK_INPUT_READY(x) \
   PD_CHECK(x.initialized(), #x " must be initialized before usage.")
-#define CHECK_INPUT_FP64(x)                        \
-  PD_CHECK(x.dtype() == paddle::DataType::FLOAT64, \
-           #x " dtype should be FLOAT64.")
 #define CHECK_INPUT_INT32(x) \
   PD_CHECK(x.dtype() == paddle::DataType::INT32, #x " dtype should be INT32.")
 template <typename FPTYPE>
@@ -67,15 +64,16 @@ void buildAndSortNeighborList(int i_idx,
 }
 
 
+template <typename data_t>
 void DescrptSeAMaskCPUKernel(int n_descrpt,
                              int total_atom_num,
                              int nsamples,
-                             const double* coord,
+                             const data_t* coord,
                              const int* type,
                              const int* mask_matrix,
-                             double* descrpt,
-                             double* descrpt_deriv,
-                             double* rij,
+                             data_t* descrpt,
+                             data_t* descrpt_deriv,
+                             data_t* rij,
                              int* nlist) {
 #pragma omp parallel for
     for (int kk = 0; kk < nsamples; ++kk) {
@@ -105,20 +103,20 @@ void DescrptSeAMaskCPUKernel(int n_descrpt,
             // Check this atom is virtual atom or not. If it is, set the virtual
             // atom's environment descriptor and derivation on descriptor to be zero
             // directly.
-            if (mask_matrix[kk*total_atom_num+ ii] == 0) {
+            if (mask_matrix[kk * total_atom_num + ii] == 0) {
                 for (int jj = 0; jj < natoms * 4; ++jj) {
-                    descrpt[kk*total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = 0.;
+                    descrpt[kk * total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = 0.;
                 }
                 for (int jj = 0; jj < natoms * 4 * 3; ++jj) {
-                    descrpt_deriv[kk*total_atom_num * total_atom_num * n_descrpt * 3+ ii * total_atom_num * 4 * 3 + jj] = 0.;
+                    descrpt_deriv[kk * total_atom_num * total_atom_num * n_descrpt * 3 + ii * total_atom_num * 4 * 3 + jj] = 0.;
                 }
                 // Save the neighbor list relative coordinates with center atom ii.
                 for (int jj = 0; jj < natoms * 3; ++jj) {
-                    rij[kk*total_atom_num * total_atom_num * 3+ ii * natoms * 3 + jj] = 0.;
+                    rij[kk * total_atom_num * total_atom_num * 3 + ii * natoms * 3 + jj] = 0.;
                 }
                 // Save the neighbor atoms indicies.
                 for (int jj = 0; jj < natoms; jj++) {
-                    nlist[kk*total_atom_num * total_atom_num+ ii * natoms + jj] = -1;
+                    nlist[kk * total_atom_num * total_atom_num+ ii * natoms + jj] = -1;
                 }
                 continue;
             }
@@ -154,7 +152,7 @@ void DescrptSeAMaskCPUKernel(int n_descrpt,
                 // Once ii == j_idx, the descriptor and derivation should be set to
                 // zero. Or if the atom jj is an virtual atom. The descriptor and
                 // derivation should be zero also.
-                if (ii == j_idx || mask_matrix[kk*total_atom_num+ j_idx] == 0) {
+                if (ii == j_idx || mask_matrix[kk * total_atom_num + j_idx] == 0) {
                     // 1./rr, cos(theta), cos(phi), sin(phi)
                     descrpt_atom[jj * 4 + 0] = 0.;
                     descrpt_atom[jj * 4 + 1] = 0.;
@@ -229,19 +227,19 @@ void DescrptSeAMaskCPUKernel(int n_descrpt,
             }
 
             for (int jj = 0; jj < natoms * 4; ++jj) {
-                descrpt[kk*total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = descrpt_atom[jj];
+                descrpt[kk * total_atom_num * total_atom_num * n_descrpt+ ii * total_atom_num * 4 + jj] = descrpt_atom[jj];
             }
             for (int jj = 0; jj < natoms * 4 * 3; ++jj) {
-                descrpt_deriv[kk*total_atom_num * total_atom_num * n_descrpt * 3+ ii * total_atom_num * 4 * 3 + jj] =
+                descrpt_deriv[kk * total_atom_num * total_atom_num * n_descrpt * 3 + ii * total_atom_num * 4 * 3 + jj] =
                         descrpt_deriv_atom[jj];
             }
             // Save the neighbor list relative coordinates with center atom ii.
             for (int jj = 0; jj < natoms * 3; ++jj) {
-                rij[kk*total_atom_num * total_atom_num * 3+ ii * natoms * 3 + jj] = rij_atom[jj];
+                rij[kk * total_atom_num * total_atom_num * 3 + ii * natoms * 3 + jj] = rij_atom[jj];
             }
             // Save the neighbor atoms indicies.
             for (int jj = 0; jj < natoms; ++jj) {
-                nlist[kk*total_atom_num * total_atom_num+ ii * natoms + jj] = sorted_nlist[jj];
+                nlist[kk * total_atom_num * total_atom_num + ii * natoms + jj] = sorted_nlist[jj];
             }
         }
     }
@@ -262,10 +260,8 @@ std::vector<paddle::Tensor> DescrptSeAMaskCPU(
     CHECK_INPUT(natoms_tensor);
     CHECK_INPUT(mesh_tensor);
 
-    CHECK_INPUT_FP64(coord_tensor);
     CHECK_INPUT_INT32(type_tensor);
     CHECK_INPUT_INT32(mask_matrix_tensor);
-    CHECK_INPUT_FP64(box_tensor);
     CHECK_INPUT_INT32(natoms_tensor);
     CHECK_INPUT_INT32(mesh_tensor);
     // set size of the sample
@@ -283,15 +279,15 @@ std::vector<paddle::Tensor> DescrptSeAMaskCPU(
 
     // Set n_descrpt for each atom. Include 1/rr, cos(theta), cos(phi), sin(phi)
     int n_descrpt = 4;
-    // int total_atom_num;
+
     // Calculate the total_atom_num
     const int* natoms = natoms_tensor.data<int>();
     int total_atom_num = natoms[1];
     // check the sizes
-    PD_CHECK(total_atom_num*3 == coord_tensor.shape()[1], "number of samples should match");
+    PD_CHECK(total_atom_num * 3 == coord_tensor.shape()[1], "number of samples should match");
     PD_CHECK(total_atom_num == mask_matrix_tensor.shape()[1], "number of samples should match");
 
-//create output tensor
+    //create output tensor
     std::vector<int64_t> descrpt_shape{nsamples, total_atom_num * total_atom_num * n_descrpt};
     std::vector<int64_t> descrpt_deriv_shape{nsamples, total_atom_num * total_atom_num * n_descrpt * 3};
     std::vector<int64_t> rij_shape{nsamples, total_atom_num * total_atom_num * 3};
@@ -305,26 +301,20 @@ std::vector<paddle::Tensor> DescrptSeAMaskCPU(
     paddle::Tensor nlist_tensor = paddle::empty(
             nlist_shape, type_tensor.dtype(), type_tensor.place());
 
-    const double* coord = coord_tensor.data<double>();
-    const int* type = type_tensor.data<int>();
-    const int* mask_matrix = mask_matrix_tensor.data<int>();
-
-    double* descrpt = descrpt_tensor.data<double>();
-    double* descrpt_deriv = descrpt_deriv_tensor.data<double>();
-    double* rij = rij_tensor.data<double>();
-    int* nlist = nlist_tensor.data<int>();
-    DescrptSeAMaskCPUKernel(
-            n_descrpt,
-            total_atom_num,
-            nsamples,
-            coord,
-            type,
-            mask_matrix,
-            descrpt,
-            descrpt_deriv,
-            rij,
-            nlist);
-
+    PD_DISPATCH_FLOATING_TYPES(
+            coord_tensor.type(), "descrpt_se_a_mask_kernel", ([&] {
+                DescrptSeAMaskCPUKernel<data_t>(
+                        n_descrpt,
+                        total_atom_num,
+                        nsamples,
+                        coord_tensor.data<data_t>(),
+                        type_tensor.data<int>(),
+                        mask_matrix_tensor.data<int>(),
+                        descrpt_tensor.data<data_t>(),
+                        descrpt_deriv_tensor.data<data_t>(),
+                        rij_tensor.data<data_t>(),
+                        nlist_tensor.data<int>());
+            }));
     return {descrpt_tensor, descrpt_deriv_tensor, rij_tensor, nlist_tensor};
 }
 
@@ -346,6 +336,6 @@ std::vector<paddle::Tensor> DescrptSeAMask(
 }
 
 PD_BUILD_OP(descrpt_se_a_mask)
-.Inputs({"coord", "type", "mask", "box", "natoms", "mesh"})
-.Outputs({"descrpt", "descrpt_deriv", "rij", "nlist"})
-.SetKernelFn(PD_KERNEL(DescrptSeAMask));
+    .Inputs({"coord", "type", "mask", "box", "natoms", "mesh"})
+    .Outputs({"descrpt", "descrpt_deriv", "rij", "nlist"})
+    .SetKernelFn(PD_KERNEL(DescrptSeAMask));

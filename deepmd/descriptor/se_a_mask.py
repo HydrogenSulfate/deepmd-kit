@@ -22,7 +22,7 @@ from .descriptor import Descriptor
 from .se_a import DescrptSeA
 
 
-@Descriptor.register("se_a_mask")
+# @Descriptor.register("se_a_mask")
 class DescrptSeAMask(DescrptSeA):
     r"""DeepPot-SE constructed from all information (both angular and radial) of
     atomic configurations. The embedding takes the distance between atoms as input.
@@ -163,8 +163,8 @@ class DescrptSeAMask(DescrptSeA):
         for ii in range(self.ntypes):
             nei_type = np.append(nei_type, ii * np.ones(self.sel_a[ii]))  # like a mask
         # self.nei_type = tf.constant(nei_type, dtype=tf.int32)
-        self.nei_type = paddle.to_tensor(nei_type, dtype="int32")
-
+        # self.nei_type = paddle.to_tensor(nei_type, dtype="int32")
+        self.register_buffer("nei_type", paddle.to_tensor(nei_type, dtype="int32"))
         nets = []
         # self._pass_filter => self._filter => self._filter_lower
         for type_input in range(self.ntypes):
@@ -184,43 +184,6 @@ class DescrptSeAMask(DescrptSeA):
             nets.append(paddle.nn.LayerList(layer))
 
         self.embedding_nets = paddle.nn.LayerList(nets)
-
-        # avg_zero = np.zeros([self.ntypes, self.ndescrpt]).astype(
-        #     GLOBAL_NP_FLOAT_PRECISION
-        # )
-        # std_ones = np.ones([self.ntypes, self.ndescrpt]).astype(
-        #     GLOBAL_NP_FLOAT_PRECISION
-        # )
-        # sub_graph = tf.Graph()
-        # with sub_graph.as_default():
-        #     name_pfx = "d_sea_mask_"
-        #     for ii in ["coord", "box"]:
-        #         self.place_holders[ii] = tf.placeholder(
-        #             GLOBAL_NP_FLOAT_PRECISION, [None, None], name=name_pfx + "t_" + ii
-        #         )
-        #     self.place_holders["type"] = tf.placeholder(
-        #         tf.int32, [None, None], name=name_pfx + "t_type"
-        #     )
-        #     self.place_holders["mask"] = tf.placeholder(
-        #         tf.int32, [None, None], name=name_pfx + "t_aparam"
-        #     )  # named aparam for inference compatibility in c++ interface.
-
-        #     self.place_holders["natoms_vec"] = tf.placeholder(
-        #         tf.int32, [self.ntypes + 2], name=name_pfx + "t_natoms"
-        #     )  # Not used in se_a_mask. For compatibility with c++ interface.
-        #     self.place_holders["default_mesh"] = tf.placeholder(
-        #         tf.int32, [None], name=name_pfx + "t_mesh"
-        #     )  # Not used in se_a_mask. For compatibility with c++ interface.
-
-        #     self.stat_descrpt, descrpt_deriv, rij, nlist = op_module.descrpt_se_a_mask(
-        #         self.place_holders["coord"],
-        #         self.place_holders["type"],
-        #         self.place_holders["mask"],
-        #         self.place_holders["box"],
-        #         self.place_holders["natoms_vec"],
-        #         self.place_holders["default_mesh"],
-        #     )
-        # self.sub_sess = tf.Session(graph=sub_graph, config=default_tf_session_config)
         self.original_sel = None
 
     def get_rcut(self) -> float:
@@ -346,15 +309,16 @@ class DescrptSeAMask(DescrptSeA):
         box_ = paddle.reshape(
             box_, [-1, 9]
         )  # Not used in se_a_mask descriptor. For compatibility in c++ inference.
-        
+
         atype = paddle.reshape(atype_, [-1, natoms[1]])
-        
+
         coord = paddle.to_tensor(coord, place="cpu")
         atype = paddle.to_tensor(atype, place="cpu")
         self.mask = paddle.to_tensor(self.mask, place="cpu")
         box_ = paddle.to_tensor(box_, place="cpu")
         natoms = paddle.to_tensor(natoms, place="cpu")
         mesh = paddle.to_tensor(mesh, place="cpu")
+        
         (
             self.descrpt,
             self.descrpt_deriv,
@@ -383,7 +347,7 @@ class DescrptSeAMask(DescrptSeA):
         # only used when tensorboard was set as true
         # tf.summary.histogram("embedding_net_output", self.dout)
         return self.dout
-    
+
     def prod_force_virial(
         self,
         atom_ener: paddle.Tensor,

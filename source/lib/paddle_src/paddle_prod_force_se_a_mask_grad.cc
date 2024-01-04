@@ -17,12 +17,6 @@ void ProdForceSeAMaskOpCPUBackwardKernel(int nloc,
                                          const int* mask,
                                          const int* nlist,
                                          data_t* grad_net) {
-    // int nloc = total_atom_num;
-    // int ndescrpt = nloc > 0 ? nframes * nloc * 3 / net_deriv.shape()[1] : 0;
-    // int ndescrpt = nloc * 4;
-    // int nnei = total_atom_num;
-    // int nnei = nloc > 0 ? nlist_tensor.shape()[1] / nloc : 0;
-
 #pragma omp parallel for
     for (int kk = 0; kk < nframes; ++kk) {
         int grad_iter = kk * nloc * 3;
@@ -105,11 +99,8 @@ std::vector<paddle::Tensor> ProdForceSeAMaskOpCPUBackward(
 
     int nframes = net_deriv_tensor.shape()[0];
     int nloc = total_atom_num;
-    int nall = total_atom_num;
-    int ndescrpt = nall * 4;
-    // int ndescrpt = nloc > 0 ? net_deriv_tensor.shape()[1] / nloc : 0;
-    // int nnei = total_atom_num;
-    int nnei = nloc > 0 ? nlist_tensor.shape()[1] / nloc : 0;
+    int ndescrpt = nloc > 0 ? net_deriv_tensor.shape()[1] / nloc : 0;
+    int nnei = total_atom_num;
 
     PD_CHECK(nframes == grad_tensor.shape()[0], "Number of frames should match");
     PD_CHECK(nframes == in_deriv_tensor.shape()[0],
@@ -153,7 +144,7 @@ std::vector<paddle::Tensor> ProdForceSeAMaskBackward(
 }
 
 PD_BUILD_GRAD_OP(prod_force_se_a_mask)
-.Inputs({paddle::Grad("force"), "net_deriv", "in_deriv", "mask", "nlist"})
-.Attrs({"total_atom_num: int"})
-.Outputs({paddle::Grad("net_deriv")})
-.SetKernelFn(PD_KERNEL(ProdForceSeAMaskBackward));
+    .Inputs({paddle::Grad("force"), "net_deriv", "in_deriv", "mask", "nlist"})
+    .Attrs({"total_atom_num: int"})
+    .Outputs({paddle::Grad("net_deriv")})
+    .SetKernelFn(PD_KERNEL(ProdForceSeAMaskBackward));

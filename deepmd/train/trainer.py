@@ -28,8 +28,8 @@ from deepmd.env import paddle
 from deepmd.env import tf
 from deepmd.env import tfv2
 from deepmd.fit import Fitting
-from deepmd.fit import ener
 from deepmd.fit import dipole
+from deepmd.fit import ener
 from deepmd.loss import DOSLoss
 from deepmd.loss import EnerDipoleLoss
 from deepmd.loss import EnerSpinLoss
@@ -126,7 +126,7 @@ class DPTrainer:
             descrpt_param["multi_task"] = True
         if descrpt_param["type"] in ["se_e2_a", "se_a", "se_e2_r", "se_r", "hybrid"]:
             descrpt_param["spin"] = self.spin
-        if descrpt_param["type"]=="se_a_mask":
+        if descrpt_param["type"] == "se_a_mask":
             descrpt_param.pop("type")
             self.descrpt = deepmd.descriptor.se_a_mask.DescrptSeAMask(**descrpt_param)
         else:

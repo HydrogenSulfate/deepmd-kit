@@ -82,7 +82,7 @@
     "seed": 10,
     "disp_freq": 100,
     "save_freq": 1000,
-    "tensorboard": true,
+    "tensorboard": false,
     "tensorboard_log_dir": "log4tensorboard",
     "tensorboard_freq": 100,
     "_comment": "that's all"

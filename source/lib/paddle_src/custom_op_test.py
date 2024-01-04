@@ -241,7 +241,7 @@ def test_prod_virial_se_a(place="cpu"):
         n_r_sel=nnei_r,
     )
     virial.sum().backward()
-    print(f"net_deriv_reshape.grad.shape = {net_deriv_reshape.grad.shape}")
+    # print(f"net_deriv_reshape.grad.shape = {net_deriv_reshape.grad.shape}")
 
     virial_load = np.load(osp.join(unitest_dir, "prod_virial_se_a/descrpt.virial.npy"))
     atom_virial_load = np.load(
@@ -291,7 +291,7 @@ def test_prod_force_se_a_mask(place="cpu"):
         total_atom_num,
     )
     force.sum().backward()
-    print(f"net_deriv_reshape.grad.shape = {net_deriv_reshape.grad.shape}")
+    # print(f"net_deriv_reshape.grad.shape = {net_deriv_reshape.grad.shape}")
 
     # print(mn.shape, mn.min().item()); print(mn.max().item()); print(mn.mean().item()); print(mn.var().item())
     # print(mn_load.shape); print(mn_load.min().item()); print(mn_load.max().item()); print(mn_load.mean().item()); print(mn_load.var().item())
