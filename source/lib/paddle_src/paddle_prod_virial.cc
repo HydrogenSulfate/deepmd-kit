@@ -60,6 +60,7 @@ std::vector<paddle::Tensor> ProdVirialSeAOpCPUForward(
   int nframes = net_deriv_tensor.shape()[0];
   int ndescrpt = net_deriv_tensor.shape()[1] / nloc;
 
+  // check the size
   PD_CHECK(nframes == in_deriv_tensor.shape()[0],
            "number of samples should match");
   PD_CHECK(nframes == rij_tensor.shape()[0], "number of samples should match");
@@ -70,6 +71,7 @@ std::vector<paddle::Tensor> ProdVirialSeAOpCPUForward(
   PD_CHECK((nloc * nnei * 3) == rij_tensor.shape()[1],
            "dim of rij should be nnei * 3");
 
+  // create output tensor
   std::vector<int64_t> virial_shape{nframes, 9};
   std::vector<int64_t> atom_virial_shape{nframes, 9 * nall};
   paddle::Tensor virial_tensor = paddle::empty(
@@ -89,7 +91,8 @@ std::vector<paddle::Tensor> ProdVirialSeAOpCPUForward(
   return {virial_tensor, atom_virial_tensor};
 }
 
-std::vector<paddle::Tensor> ProdVirialSeAOpCUDAForward(
+std::vector<paddle::Tensor>
+ProdVirialSeAOpCUDAForward(  // GPU实现文件同名后缀改为.cu
     const paddle::Tensor& net_deriv_tensor,
     const paddle::Tensor& in_deriv_tensor,
     const paddle::Tensor& rij_tensor,
@@ -111,15 +114,15 @@ std::vector<paddle::Tensor> ProdVirialSeAForward(
         net_deriv_tensor, in_deriv_tensor, rij_tensor, nlist_tensor,
         natoms_tensor.copy_to(paddle::CPUPlace(), false), n_a_sel, n_r_sel);
   } else if (net_deriv_tensor.is_cpu()) {
-    return ProdVirialSeAOpCPUForward(net_deriv_tensor, in_deriv_tensor,
-                                     rij_tensor, nlist_tensor, natoms_tensor.copy_to(paddle::CPUPlace(), false),
-                                     n_a_sel, n_r_sel);
+    return ProdVirialSeAOpCPUForward(
+        net_deriv_tensor, in_deriv_tensor, rij_tensor, nlist_tensor,
+        natoms_tensor.copy_to(paddle::CPUPlace(), false), n_a_sel, n_r_sel);
   } else {
     PD_THROW("Unsupported device type for ProdVirialSeAForward");
   }
 }
 
-std::vector<std::vector<int64_t>> ProdVirialSeAInferShape(
+std::vector<std::vector<int64_t>> ProdVirialSeAInferShape(  // 输出的形状
     std::vector<int64_t> net_deriv_shape,
     std::vector<int64_t> in_deriv_shape,
     std::vector<int64_t> rij_shape,

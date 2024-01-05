@@ -8,12 +8,12 @@
 
 template <typename data_t>
 void ProdForceSeAMaskOpForwardCPUKernel(int nframes,
-                                 int total_atom_num,
-                                 const data_t* net_deriv,
-                                 const data_t* in_deriv,
-                                 const int* mask,
-                                 const int* nlist,
-                                 data_t* force) {
+                                        int total_atom_num,
+                                        const data_t* net_deriv,
+                                        const data_t* in_deriv,
+                                        const int* mask,
+                                        const int* nlist,
+                                        data_t* force) {
   int nloc = total_atom_num;
   int nall = total_atom_num;
   int ndescrpt = nall * 4;
@@ -105,7 +105,8 @@ std::vector<paddle::Tensor> ProdForceSeAMaskForward(
 
   PD_CHECK(nframes == in_deriv_tensor.shape()[0],
            "Number of samples should match");
-  PD_CHECK(nframes == nlist_tensor.shape()[0], "Number of samples should match");
+  PD_CHECK(nframes == nlist_tensor.shape()[0],
+           "Number of samples should match");
   PD_CHECK(nloc * ndescrpt * 3 == in_deriv_tensor.shape()[1],
            "Number of descriptors should match");
 

@@ -1,32 +1,30 @@
-import logging
-from typing import List
-from typing import Optional
-import numpy as np
-from paddle import nn
+from typing import (
+    List,
+    Optional,
+)
 
-from deepmd.common import add_data_requirement
-from deepmd.common import cast_precision
-from deepmd.common import get_activation_func
-from deepmd.common import get_precision
-from deepmd.env import GLOBAL_PD_FLOAT_PRECISION
-from deepmd.env import GLOBAL_TF_FLOAT_PRECISION
-from deepmd.env import global_cvt_2_pd_float
-from deepmd.env import global_cvt_2_tf_float
-from deepmd.env import paddle
-from deepmd.env import tf
-from deepmd.fit.fitting import Fitting
+import numpy as np
+from paddle import (
+    nn,
+)
+
+from deepmd.common import (
+    get_activation_func,
+    get_precision,
+)
+from deepmd.env import (
+    paddle,
+    tf,
+)
 
 # from deepmd.infer import DeepPotential
-from deepmd.nvnmd.fit.ener import one_layer_nvnmd
-from deepmd.nvnmd.utils.config import nvnmd_cfg
-from deepmd.utils.errors import GraphWithoutTensorError
-from deepmd.utils.graph import get_fitting_net_variables_from_graph_def
-from deepmd.utils.graph import get_tensor_by_name_from_graph
+from deepmd.utils.graph import (
+    get_fitting_net_variables_from_graph_def,
+)
 from deepmd.utils.network import OneLayer as OneLayer_deepmd
-from deepmd.utils.network import one_layer
-from deepmd.utils.network import one_layer as one_layer_deepmd
-from deepmd.utils.network import one_layer_rand_seed_shift
-from deepmd.utils.spin import Spin
+from deepmd.utils.network import (
+    one_layer_rand_seed_shift,
+)
 
 
 # @Fitting.register("dipole")
@@ -97,7 +95,6 @@ class DipoleFittingSeA(nn.Layer):
         for type_i in range(0, ntypes_atom):
             type_i_layers = nn.LayerList()
             for ii in range(0, len(self.n_neuron)):
-
                 layer_suffix = "layer_" + str(ii) + type_suffix + suffix
 
                 if ii >= 1 and self.n_neuron[ii] == self.n_neuron[ii - 1]:
@@ -242,7 +239,9 @@ class DipoleFittingSeA(nn.Layer):
 
         if type_embedding is not None:
             nloc_mask = paddle.reshape(
-                paddle.tile(paddle.repeat_interleave(self.sel_mask, natoms[2:]), [nframes]),
+                paddle.tile(
+                    paddle.repeat_interleave(self.sel_mask, natoms[2:]), [nframes]
+                ),
                 [nframes, -1],
             )
             atype_nall = paddle.reshape(atype, [-1, natoms[1]])
@@ -253,9 +252,7 @@ class DipoleFittingSeA(nn.Layer):
             self.nloc_masked = paddle.shape(
                 paddle.reshape(self.atype_nloc_masked, [nframes, -1])
             )[1]
-            atype_embed = nn.embedding_lookup(
-                type_embedding, self.atype_nloc_masked
-            )
+            atype_embed = nn.embedding_lookup(type_embedding, self.atype_nloc_masked)
         else:
             atype_embed = None
 

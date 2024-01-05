@@ -1,12 +1,15 @@
 import numpy as np
 
-from deepmd.common import add_data_requirement
-from deepmd.env import global_cvt_2_tf_float
-from deepmd.env import paddle
-from deepmd.env import tf
-from deepmd.utils.sess import run_sess
+from deepmd.common import (
+    add_data_requirement,
+)
+from deepmd.env import (
+    paddle,
+)
 
-from .loss import Loss
+from .loss import (
+    Loss,
+)
 
 
 class TensorLoss(Loss):

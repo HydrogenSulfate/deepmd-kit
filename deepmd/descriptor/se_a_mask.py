@@ -1,26 +1,27 @@
 import warnings
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+)
 
 import numpy as np
 
-from deepmd.common import get_activation_func
-from deepmd.common import get_precision
-from deepmd.env import GLOBAL_NP_FLOAT_PRECISION
-from deepmd.env import GLOBAL_PD_FLOAT_PRECISION
-from deepmd.env import GLOBAL_TF_FLOAT_PRECISION
-from deepmd.env import default_tf_session_config
-from deepmd.env import op_module
-from deepmd.env import paddle
-from deepmd.env import tf
+from deepmd.common import (
+    get_activation_func,
+    get_precision,
+)
+from deepmd.env import (
+    GLOBAL_PD_FLOAT_PRECISION,
+    op_module,
+    paddle,
+)
 from deepmd.utils.network import EmbeddingNet  # embedding_net,
-from deepmd.utils.network import embedding_net_rand_seed_shift
-
-from .descriptor import Descriptor
-from .se_a import DescrptSeA
+from deepmd.utils.network import (
+    embedding_net_rand_seed_shift,
+)
 
 
 class DescrptSeAMask(paddle.nn.Layer):
@@ -385,7 +386,6 @@ class DescrptSeAMask(paddle.nn.Layer):
         atom_virial
             None for se_a_mask op
         """
-
         net_deriv = paddle.grad(atom_ener, self.descrpt_reshape, create_graph=True)[0]
         # tf.summary.histogram("net_derivative", net_deriv)
         net_deriv_reshape = paddle.reshape(net_deriv, [-1, natoms[0] * self.ndescrpt])

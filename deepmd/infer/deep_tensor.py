@@ -1,19 +1,31 @@
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 
-from deepmd.common import make_default_mesh
-from deepmd.env import paddle
-from deepmd.infer.deep_eval import DeepEval
-from deepmd.utils.sess import run_sess
+from deepmd.common import (
+    make_default_mesh,
+)
+from deepmd.env import (
+    paddle,
+)
+from deepmd.infer.deep_eval import (
+    DeepEval,
+)
+from deepmd.utils.sess import (
+    run_sess,
+)
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from pathlib import (
+        Path,
+    )
 
 
 class DeepTensor(DeepEval):
