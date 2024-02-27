@@ -1,3 +1,4 @@
+import os
 from functools import (
     lru_cache,
 )
@@ -22,10 +23,14 @@ from deepmd.env import (
     tf,
 )
 from deepmd.fit import (
+    dipole,
     ener,
+    polar,
 )
 from deepmd.model import (
+    DipoleModel,
     EnerModel,
+    PolarModel,
 )
 from deepmd.utils.batch_size import (
     AutoBatchSize,
@@ -92,7 +97,13 @@ class DeepEval:
         default_tf_graph: bool = False,
         auto_batch_size: Union[bool, int, AutoBatchSize] = False,
     ):
-        jdata = j_loader("input.json")
+        jdata = j_loader(
+            "input.json"
+            if os.path.exists("input.json")
+            else "dipole_input.json"
+            if os.path.exists("dipole_input.json")
+            else "polar_input.json"
+        )
         remove_comment_in_json(jdata)
         model_param = j_must_have(jdata, "model")
         self.multi_task_mode = "fitting_net_dict" in model_param
@@ -147,7 +158,13 @@ class DeepEval:
             if fitting_type == "ener":
                 fitting_param["spin"] = spin
                 fitting_param.pop("type", None)
-            fitting = ener.EnerFitting(**fitting_param)
+                fitting = ener.EnerFitting(**fitting_param)
+            elif fitting_type == "dipole":
+                fitting_param.pop("type")
+                fitting = dipole.DipoleFittingSeA(**fitting_param)
+            elif fitting_type == "polar":
+                fitting_param.pop("type")
+                fitting = polar.PolarFittingSeA(**fitting_param)
         else:
             self.fitting_dict = {}
             self.fitting_type_dict = {}
@@ -223,25 +240,24 @@ class DeepEval:
                 # )
 
             elif self.fitting_type == "dipole":
-                raise NotImplementedError()
-                # self.model = DipoleModel(
-                #     descrpt,
-                #     fitting,
-                #     typeebd,
-                #     model_param.get("type_map"),
-                #     model_param.get("data_stat_nbatch", 10),
-                #     model_param.get("data_stat_protect", 1e-2),
-                # )
+                self.model = DipoleModel(
+                    descrpt,
+                    fitting,
+                    typeebd,
+                    model_param.get("type_map"),
+                    model_param.get("data_stat_nbatch", 10),
+                    model_param.get("data_stat_protect", 1e-2),
+                )
             elif self.fitting_type == "polar":
-                raise NotImplementedError()
-                # self.model = PolarModel(
-                #     descrpt,
-                #     fitting,
-                #     typeebd,
-                #     model_param.get("type_map"),
-                #     model_param.get("data_stat_nbatch", 10),
-                #     model_param.get("data_stat_protect", 1e-2),
-                # )
+                # raise NotImplementedError()
+                self.model = PolarModel(
+                    descrpt,
+                    fitting,
+                    typeebd,
+                    model_param.get("type_map"),
+                    model_param.get("data_stat_nbatch", 10),
+                    model_param.get("data_stat_protect", 1e-2),
+                )
             # elif self.fitting_type == 'global_polar':
             #     self.model = GlobalPolarModel(
             #         descrpt,
@@ -359,7 +375,7 @@ class DeepEval:
     @property
     @lru_cache(maxsize=None)
     def model_type(self) -> str:
-        return "ener"
+        return self.model.model_type
         """Get type of model.
 
         :type:str
@@ -418,7 +434,7 @@ class DeepEval:
 
     def _get_value(
         self, tensor_name: str, attr_name: Optional[str] = None
-    ) -> tf.Tensor:
+    ) -> paddle.Tensor:
         """Get TF graph tensor and assign it to class namespace.
 
         Parameters

@@ -82,7 +82,6 @@ def DeepPotential(
     model_type = DeepEval(
         mf, load_prefix=load_prefix, default_tf_graph=default_tf_graph
     ).model_type
-
     if model_type == "ener":
         dp = DeepPot(mf, load_prefix=load_prefix, default_tf_graph=default_tf_graph)
     elif model_type == "dos":
