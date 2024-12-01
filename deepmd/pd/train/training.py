@@ -19,9 +19,6 @@ import paddle.distributed as dist
 from paddle.distributed import (
     fleet,
 )
-from paddle.framework import (
-    core,
-)
 from paddle.io import (
     DataLoader,
 )
@@ -397,11 +394,11 @@ class Trainer:
             self.lr_exp = get_lr(config["learning_rate"])
 
         # JIT
-        if JIT:
-            raise NotImplementedError(
-                "JIT is not supported yet when training with Paddle"
-            )
-            self.model = paddle.jit.to_static(self.model)
+        # if JIT:
+        #     raise NotImplementedError(
+        #         "JIT is not supported yet when training with Paddle"
+        #     )
+        #     self.model = paddle.jit.to_static(self.model)
 
         # Model Wrapper
         self.wrapper = ModelWrapper(self.model, self.loss, model_params=model_params)
@@ -632,6 +629,24 @@ class Trainer:
         self.profiling_file = training_params.get("profiling_file", "timeline.json")
 
     def run(self):
+        if JIT:
+            from paddle import (
+                jit,
+                static,
+            )
+            from paddle.framework import (
+                core,
+            )
+
+            core._set_prim_all_enabled(True)
+            enable_cinn = True
+            build_strategy = static.BuildStrategy()
+            build_strategy.build_cinn_pass = enable_cinn
+            self.wrapper.forward = jit.to_static(
+                full_graph=True, build_strategy=build_strategy
+            )(self.wrapper.forward)
+            log.info(f"{'*' * 20} Using Jit {'*' * 20}")
+
         fout = (
             open(
                 self.disp_file,
