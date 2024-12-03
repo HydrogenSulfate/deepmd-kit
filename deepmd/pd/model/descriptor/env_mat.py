@@ -30,8 +30,15 @@ def _make_env_mat(
     length = paddle.linalg.norm(diff, axis=-1, keepdim=True)
     # for index 0 nloc atom
     length = length + (~mask.unsqueeze(-1)).astype(length.dtype)
-    t0 = 1 / (length + protection)
-    t1 = diff / (length + protection) ** 2
+
+    # code below requires pd_op.elemenwise_pow_grad, which is not available
+    # t0 = 1 / (length + protection)
+    # t1 = diff / (length + protection) ** 2
+
+    tmp = length + protection
+    t0 = 1 / (tmp)
+    t1 = diff / (tmp * tmp)
+
     weight = compute_smooth_weight(length, ruct_smth, rcut)
     weight = weight * mask.unsqueeze(-1).astype(weight.dtype)
     if radial_only:

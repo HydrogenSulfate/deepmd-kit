@@ -144,6 +144,7 @@ def enable_prim(enable: bool = True):
     )
 
     core.set_prim_eager_enabled(enable)
+    paddle.framework.core._set_prim_all_enabled(enable)
     if enable:
         paddle.framework.core._set_prim_backward_blacklist(*EAGER_COMP_OP_BLACK_LIST)
     log = logging.getLogger(__name__)
