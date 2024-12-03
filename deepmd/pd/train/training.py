@@ -52,6 +52,7 @@ from deepmd.pd.utils.dataloader import (
 from deepmd.pd.utils.env import (
     DEVICE,
     JIT,
+    CINN,
     NUM_WORKERS,
     SAMPLER_RECORD,
     enable_prim,
@@ -638,8 +639,7 @@ class Trainer:
                 core,
             )
 
-            core._set_prim_all_enabled(True)
-            enable_cinn = True
+            enable_cinn = CINN
             build_strategy = static.BuildStrategy()
             build_strategy.build_cinn_pass = enable_cinn
             self.wrapper.forward = jit.to_static(
