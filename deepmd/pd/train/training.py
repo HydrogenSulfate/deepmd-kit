@@ -50,9 +50,9 @@ from deepmd.pd.utils.dataloader import (
     get_sampler_from_params,
 )
 from deepmd.pd.utils.env import (
+    CINN,
     DEVICE,
     JIT,
-    CINN,
     NUM_WORKERS,
     SAMPLER_RECORD,
     enable_prim,
@@ -635,9 +635,6 @@ class Trainer:
                 jit,
                 static,
             )
-            from paddle.framework import (
-                core,
-            )
 
             enable_cinn = CINN
             build_strategy = static.BuildStrategy()
@@ -670,13 +667,13 @@ class Trainer:
             writer = SummaryWriter(log_dir=self.tensorboard_log_dir)
         enable_profiling = self.enable_profiler or self.profiling
         if enable_profiling:
-            core.nvprof_start()
-            core.nvprof_enable_record_event()
+            paddle.framework.core.nvprof_start()
+            paddle.framework.core.nvprof_enable_record_event()
 
         def step(_step_id, task_key="Default") -> None:
             # Paddle Profiler
             if enable_profiling:
-                core.nvprof_nvtx_push(f"Training step {_step_id}")
+                paddle.framework.core.nvprof_nvtx_push(f"Training step {_step_id}")
 
             self.wrapper.train()
             if isinstance(self.lr_exp, dict):
@@ -686,9 +683,10 @@ class Trainer:
             cur_lr = _lr.value(_step_id)
             pref_lr = cur_lr
             self.optimizer.clear_grad(set_to_zero=False)
-            input_dict, label_dict, log_dict = self.get_data(
-                is_train=True, task_key=task_key
-            )
+            with nvprof_context(enable_profiling, "Fetching data"):
+                input_dict, label_dict, log_dict = self.get_data(
+                    is_train=True, task_key=task_key
+                )
             if SAMPLER_RECORD:
                 print_str = f"Step {_step_id}: sample system{log_dict['sid']}  frame{log_dict['fid']}\n"
                 fout1.write(print_str)
@@ -898,7 +896,7 @@ class Trainer:
                     )
 
             if enable_profiling:
-                core.nvprof_nvtx_pop()
+                paddle.framework.core.nvprof_nvtx_pop()
 
         self.wrapper.train()
         self.t0 = time.time()
@@ -990,7 +988,7 @@ class Trainer:
         if self.enable_tensorboard:
             writer.close()
         if enable_profiling:
-            core.nvprof_stop()
+            paddle.framework.core.nvprof_stop()
             log.info(
                 "The nsys profiling trace have been saved to *.nsys-rep and *.sqlite "
                 "files, which can be viewd in NVIDIA Nsight Systems software"
