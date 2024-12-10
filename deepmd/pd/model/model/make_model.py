@@ -473,7 +473,8 @@ def make_model(T_AtomicModel: type[BaseAtomicModel]):
                 nlist = nlist[..., :nnei]
             else:  # not extra_nlist_sort and n_nnei <= nnei:
                 pass  # great!
-            assert nlist.shape[-1] == nnei
+            if paddle.in_dynamic_mode():
+                assert nlist.shape[-1] == nnei
             return nlist
 
         def do_grad_r(

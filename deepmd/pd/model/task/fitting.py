@@ -182,7 +182,8 @@ class GeneralFitting(Fitting):
         )
         bias_atom_e = bias_atom_e.reshape([self.ntypes, net_dim_out])
         if not self.mixed_types:
-            assert self.ntypes == bias_atom_e.shape[0], "Element count mismatches!"
+            if paddle.in_dynamic_mode():
+                assert self.ntypes == bias_atom_e.shape[0], "Element count mismatches!"
         self.register_buffer("bias_atom_e", bias_atom_e)
 
         if self.numb_fparam > 0:
@@ -325,7 +326,7 @@ class GeneralFitting(Fitting):
         variables = data.pop("@variables")
         nets = data.pop("nets")
         obj = cls(**data)
-        for kk in variables.keys():
+        for kk in variables:
             obj[kk] = to_paddle_tensor(variables[kk])
         obj.filter_layers = NetworkCollection.deserialize(nets)
         return obj

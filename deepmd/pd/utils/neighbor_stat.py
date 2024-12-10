@@ -87,7 +87,8 @@ class NeighborStatOP(paddle.nn.Layer):
         diff: paddle.Tensor = coord1.reshape([nframes, -1, 3]).unsqueeze(
             1
         ) - coord0.reshape([nframes, -1, 3]).unsqueeze(2)
-        assert list(diff.shape) == [nframes, nloc, nall, 3]
+        if paddle.in_dynamic_mode():
+            assert list(diff.shape) == [nframes, nloc, nall, 3]
         # remove the diagonal elements
         mask = paddle.eye(nloc, nall).to(dtype=paddle.bool, device=diff.place)
         # diff[:, mask] = float("inf")
