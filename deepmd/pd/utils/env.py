@@ -16,6 +16,7 @@ from deepmd.env import (
 )
 
 SAMPLER_RECORD = os.environ.get("SAMPLER_RECORD", False)
+DP_DTYPE_PROMOTION_STRICT = os.environ.get("DP_DTYPE_PROMOTION_STRICT", "0") == "1"
 try:
     # only linux
     ncpus = len(os.sched_getaffinity(0))
@@ -146,7 +147,7 @@ def enable_prim(enable: bool = True):
 
     core.set_prim_eager_enabled(enable)
     paddle.framework.core._set_prim_all_enabled(enable)
-    if enable:
+    if JIT is False and enable:
         paddle.framework.core._set_prim_backward_blacklist(*EAGER_COMP_OP_BLACK_LIST)
     log = logging.getLogger(__name__)
     log.info(f"{'Enable' if enable else 'Disable'} prim in eager and static mode.")
