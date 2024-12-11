@@ -33,8 +33,8 @@ else:
 
 paddle.device.set_device(DEVICE)
 
-JIT = bool(os.environ.get("JIT", False))
-CINN = bool(os.environ.get("CINN", False))
+JIT = bool(int(os.environ.get("JIT", False)))
+CINN = bool(int(os.environ.get("CINN", False)))
 CACHE_PER_SYS = 5  # keep at most so many sets per sys in memory
 ENERGY_BIAS_TRAINABLE = True
 
