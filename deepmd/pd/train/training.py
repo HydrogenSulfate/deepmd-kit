@@ -919,8 +919,8 @@ class Trainer:
             else:
                 model_key = "Default"
             step(step_id, model_key)
-            if JIT:
-                break
+            # if JIT:
+            #     break
 
         if self.change_bias_after_training and (self.rank == 0 or dist.get_rank() == 0):
             if not self.multi_task:
@@ -975,10 +975,10 @@ class Trainer:
                         / (elapsed_batch // self.disp_freq * self.disp_freq),
                     )
 
-            if JIT:
-                raise NotImplementedError(
-                    "Paddle JIT saving during training is not supported yet."
-                )
+            # if JIT:
+            #     raise NotImplementedError(
+            #         "Paddle JIT saving during training is not supported yet."
+            #     )
             log.info(f"Trained model has been saved to: {self.save_ckpt}")
 
         if fout:
