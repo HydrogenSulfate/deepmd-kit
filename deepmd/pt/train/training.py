@@ -381,9 +381,8 @@ class Trainer:
 
         # JIT
         if JIT:
-            # self.model = torch.jit.script(self.model)
+            self.model = torch.jit.script(self.model)
             # self.model = torch.compile(self.model)
-            pass
 
         # Model Wrapper
         self.wrapper = ModelWrapper(self.model, self.loss, model_params=model_params)
