@@ -472,7 +472,7 @@ def extend_coord_with_ghosts(
         )
         # 3
         nbuff = paddle.amax(nbuff, axis=0)  # faster than paddle.max
-        nbuff_cpu = nbuff.cpu()
+        nbuff_cpu = nbuff  # .cpu()
         xi = (
             paddle.arange(-nbuff_cpu[0], nbuff_cpu[0] + 1, 1).to(
                 dtype=env.GLOBAL_PD_FLOAT_PRECISION
