@@ -700,7 +700,7 @@ class Trainer:
                 with nvprof_context(enable_profiling, "Forward pass"):
                     model_pred, loss, more_loss = self.wrapper(
                         **input_dict,
-                        cur_lr=pref_lr,
+                        cur_lr=paddle.to_tensor(pref_lr),
                         label=label_dict,
                         task_key=task_key,
                     )
@@ -759,7 +759,7 @@ class Trainer:
                             return {}
                         _, loss, more_loss = self.wrapper(
                             **input_dict,
-                            cur_lr=pref_lr,
+                            cur_lr=paddle.to_tensor(pref_lr),
                             label=label_dict,
                             task_key=_task_key,
                         )
@@ -809,7 +809,7 @@ class Trainer:
                             )
                             _, loss, more_loss = self.wrapper(
                                 **input_dict,
-                                cur_lr=pref_lr,
+                                cur_lr=paddle.to_tensor(pref_lr),
                                 label=label_dict,
                                 task_key=_key,
                             )
