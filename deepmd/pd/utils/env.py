@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import logging
 import os
+import random
 
 import numpy as np
 import paddle
@@ -153,6 +154,15 @@ def enable_prim(enable: bool = True):
     log.info(f"{'Enable' if enable else 'Disable'} prim in eager and static mode.")
 
 
+def set_random_seed(seed: int):
+    """Set random seed."""
+    paddle.seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    log = logging.getLogger(__name__)
+    log.info("-" * 20 + f"Set random seed to {seed}" + "-" * 20)
+
+
 __all__ = [
     "CACHE_PER_SYS",
     "DEFAULT_PRECISION",
@@ -169,4 +179,5 @@ __all__ = [
     "RESERVED_PRECISON_DICT",
     "SAMPLER_RECORD",
     "enable_prim",
+    "set_random_seed",
 ]

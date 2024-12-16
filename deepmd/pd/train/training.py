@@ -6,6 +6,9 @@ import time
 from copy import (
     deepcopy,
 )
+from functools import (
+    partial,
+)
 from pathlib import (
     Path,
 )
@@ -48,6 +51,7 @@ from deepmd.pd.utils import (
 from deepmd.pd.utils.dataloader import (
     BufferedIterator,
     get_sampler_from_params,
+    worker_init_fn,
 )
 from deepmd.pd.utils.env import (
     CINN,
@@ -171,6 +175,12 @@ class Trainer:
                     log.warning(
                         "Sampler not specified!"
                     )  # None sampler will lead to a premature stop iteration. Replacement should be True in attribute of the sampler to produce expected number of items in one iteration.
+                init_fn = partial(
+                    worker_init_fn,
+                    num_workers=0,
+                    rank=dist.get_rank(),
+                    base_seed=training_params.get("seed", 42),
+                )
                 _dataloader = DataLoader(
                     _data,
                     batch_sampler=paddle.io.BatchSampler(

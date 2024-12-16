@@ -2,9 +2,13 @@
 import logging
 import os
 import queue
+import random
 import time
 from collections.abc import (
     Iterator,
+)
+from functools import (
+    partial,
 )
 from multiprocessing.dummy import (
     Pool,
@@ -51,7 +55,25 @@ log = logging.getLogger(__name__)
 
 def setup_seed(seed):
     paddle.seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
     os.environ["FLAGS_cudnn_deterministic"] = "True"
+
+
+def worker_init_fn(worker_id: int, num_workers: int, rank: int, base_seed: int) -> None:
+    """Callback function on each worker subprocess after seeding and before data loading.
+
+    Args:
+        worker_id (int): Worker id in [0, num_workers - 1].
+        num_workers (int): Number of subprocesses to use for data loading.
+        rank (int): Rank of process in distributed environment. If in non-distributed
+            environment, it is a constant number `0`.
+        base_seed (int): Base random seed.
+    """
+    # The seed of each worker equals to: user_seed + num_worker * rank + worker_id
+    worker_seed = base_seed + num_workers * rank + worker_id
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 class DpLoaderSet(Dataset):
@@ -154,6 +176,12 @@ class DpLoaderSet(Dataset):
                     batch_size=int(batch_size),
                 )
                 self.sampler_list.append(system_batch_sampler)
+            init_fn = partial(
+                worker_init_fn,
+                num_workers=0,
+                rank=dist.get_rank(),
+                base_seed=seed,
+            )
             system_dataloader = DataLoader(
                 dataset=system,
                 num_workers=0,  # Should be 0 to avoid too many threads forked
@@ -161,6 +189,7 @@ class DpLoaderSet(Dataset):
                 collate_fn=collate_batch,
                 use_buffer_reader=False,
                 places=["cpu"],
+                worker_init_fn=init_fn,
             )
             self.dataloaders.append(system_dataloader)
             self.index.append(len(system_dataloader))

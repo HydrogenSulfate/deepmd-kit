@@ -46,6 +46,7 @@ from deepmd.pd.utils.dataloader import (
 )
 from deepmd.pd.utils.env import (
     DEVICE,
+    set_random_seed,
 )
 from deepmd.pd.utils.finetune import (
     get_finetune_rules,
@@ -148,6 +149,8 @@ def get_trainer(
 
     rank = dist.get_rank() if dist.is_available() and dist.is_initialized() else 0
     data_seed = config["training"].get("seed", None)
+    if isinstance(data_seed, int):
+        set_random_seed(data_seed)
     if not multi_task:
         (
             train_data,
