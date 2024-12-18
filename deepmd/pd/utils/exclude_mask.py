@@ -3,6 +3,9 @@
 import numpy as np
 import paddle
 
+from deepmd.pd.utils import (
+    decomp,
+)
 from deepmd.pd.utils.utils import (
     to_paddle_tensor,
 )
@@ -15,7 +18,7 @@ class AtomExcludeMask(paddle.nn.Layer):
         self,
         ntypes: int,
         exclude_types: list[int] = [],
-    ) -> None:
+    ):
         super().__init__()
         self.reinit(ntypes, exclude_types)
 
@@ -23,7 +26,7 @@ class AtomExcludeMask(paddle.nn.Layer):
         self,
         ntypes: int,
         exclude_types: list[int] = [],
-    ) -> None:
+    ):
         self.ntypes = ntypes
         self.exclude_types = exclude_types
         self.type_mask = np.array(
@@ -68,7 +71,7 @@ class PairExcludeMask(paddle.nn.Layer):
         self,
         ntypes: int,
         exclude_types: list[tuple[int, int]] = [],
-    ) -> None:
+    ):
         super().__init__()
         self.reinit(ntypes, exclude_types)
 
@@ -76,7 +79,7 @@ class PairExcludeMask(paddle.nn.Layer):
         self,
         ntypes: int,
         exclude_types: list[tuple[int, int]] = [],
-    ) -> None:
+    ):
         self.ntypes = ntypes
         self._exclude_types: set[tuple[int, int]] = set()
         for tt in exclude_types:
@@ -134,14 +137,19 @@ class PairExcludeMask(paddle.nn.Layer):
             [
                 atype_ext,
                 self.ntypes
-                * paddle.ones([nf, 1], dtype=atype_ext.dtype).to(atype_ext.place),
+                * paddle.ones([nf, 1], dtype=atype_ext.dtype).to(
+                    device=atype_ext.place
+                ),
             ],
             axis=-1,
         )
         type_i = atype_ext[:, :nloc].reshape([nf, nloc]) * (self.ntypes + 1)
         # nf x nloc x nnei
         index = paddle.where(nlist == -1, nall, nlist).reshape([nf, nloc * nnei])
-        type_j = paddle.take_along_axis(ae, axis=1, indices=index).reshape(
+        # type_j = paddle.take_along_axis(ae, axis=1, indices=index).reshape(
+        #     [nf, nloc, nnei]
+        # )
+        type_j = decomp.take_along_axis(ae, axis=1, indices=index).reshape(
             [nf, nloc, nnei]
         )
         type_ij = type_i[:, :, None] + type_j

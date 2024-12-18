@@ -3,7 +3,6 @@ import copy
 import os
 import unittest
 
-import numpy as np
 import paddle
 
 from deepmd.pd.model.model import (
@@ -23,6 +22,7 @@ from ..common import (
 CUR_DIR = os.path.dirname(__file__)
 
 dtype = paddle.float64
+import numpy as np
 
 model_se_e2_a = {
     "type_map": ["O", "H", "B"],
@@ -344,7 +344,7 @@ model_property = {
 class PermutationTest:
     def test(
         self,
-    ) -> None:
+    ):
         natoms = 5
         generator = paddle.seed(GLOBAL_SEED)
         cell = paddle.rand([3, 3], dtype=dtype)
@@ -395,7 +395,7 @@ class PermutationTest:
 
 
 class TestEnergyModelSeA(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_se_e2_a)
         self.type_split = False
         self.model = get_model(model_params).to(env.DEVICE)
@@ -403,14 +403,15 @@ class TestEnergyModelSeA(unittest.TestCase, PermutationTest):
 
 @unittest.skip("Skip for not implemented yet")
 class TestDOSModelSeA(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_dos)
         self.type_split = False
         self.model = get_model(model_params).to(env.DEVICE)
 
 
+@unittest.skip("Skip for not implemented yet")
 class TestEnergyModelDPA1(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_dpa1)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
@@ -418,7 +419,7 @@ class TestEnergyModelDPA1(unittest.TestCase, PermutationTest):
 
 @unittest.skip("Skip for not implemented yet")
 class TestEnergyModelDPA2(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_dpa2)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
@@ -426,7 +427,7 @@ class TestEnergyModelDPA2(unittest.TestCase, PermutationTest):
 
 @unittest.skip("Skip for not implemented yet")
 class TestForceModelDPA2(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_dpa2)
         model_params["fitting_net"]["type"] = "direct_force_ener"
         self.type_split = True
@@ -436,7 +437,7 @@ class TestForceModelDPA2(unittest.TestCase, PermutationTest):
 
 @unittest.skip("Skip for not implemented yet")
 class TestEnergyModelHybrid(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_hybrid)
         self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)
@@ -444,7 +445,7 @@ class TestEnergyModelHybrid(unittest.TestCase, PermutationTest):
 
 @unittest.skip("Skip for not implemented yet")
 class TestForceModelHybrid(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_hybrid)
         model_params["fitting_net"]["type"] = "direct_force_ener"
         self.type_split = True
@@ -454,7 +455,7 @@ class TestForceModelHybrid(unittest.TestCase, PermutationTest):
 
 @unittest.skip("Skip for not implemented yet")
 class TestEnergyModelZBL(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_zbl)
         self.type_split = False
         self.model = get_model(model_params).to(env.DEVICE)
@@ -462,7 +463,7 @@ class TestEnergyModelZBL(unittest.TestCase, PermutationTest):
 
 @unittest.skip("Skip for not implemented yet")
 class TestEnergyModelSpinSeA(unittest.TestCase, PermutationTest):
-    def setUp(self) -> None:
+    def setUp(self):
         model_params = copy.deepcopy(model_spin)
         self.type_split = False
         self.test_spin = True

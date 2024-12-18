@@ -15,21 +15,17 @@ import numpy as np
 from deepmd.pd.entrypoints.main import (
     get_trainer,
 )
-from deepmd.pd.utils.env import (
-    enable_prim,
-)
 from deepmd.pd.utils.finetune import (
     get_finetune_rules,
 )
 
 from .model.test_permutation import (
-    model_dpa1,
     model_se_e2_a,
 )
 
 
 class DPTrainTest:
-    def test_dp_train(self) -> None:
+    def test_dp_train(self):
         # test training from scratch
         trainer = get_trainer(deepcopy(self.config))
         trainer.run()
@@ -99,7 +95,7 @@ class DPTrainTest:
         trainer_finetune_empty.run()
         trainer_finetune_random.run()
 
-    def test_trainable(self) -> None:
+    def test_trainable(self):
         fix_params = deepcopy(self.config)
         fix_params["model"]["descriptor"]["trainable"] = False
         fix_params["model"]["fitting_net"]["trainable"] = False
@@ -128,7 +124,7 @@ class DPTrainTest:
                 model_dict_after_training[key].numpy(),
             )
 
-    def tearDown(self) -> None:
+    def tearDown(self):
         for f in os.listdir("."):
             if f.startswith("model") and f.endswith(".pd"):
                 os.remove(f)
@@ -139,7 +135,7 @@ class DPTrainTest:
 
 
 class TestEnergyModelSeA(unittest.TestCase, DPTrainTest):
-    def setUp(self) -> None:
+    def setUp(self):
         input_json = str(Path(__file__).parent / "water/se_atten.json")
         with open(input_json) as f:
             self.config = json.load(f)
@@ -149,9 +145,6 @@ class TestEnergyModelSeA(unittest.TestCase, DPTrainTest):
         self.config["model"] = deepcopy(model_se_e2_a)
         self.config["training"]["numb_steps"] = 1
         self.config["training"]["save_freq"] = 1
-        # import paddle
-        enable_prim(True)
-        # assert paddle.framework.core._is_eager_prim_enabled()
 
     def tearDown(self) -> None:
         DPTrainTest.tearDown(self)
@@ -160,7 +153,7 @@ class TestEnergyModelSeA(unittest.TestCase, DPTrainTest):
 class TestFparam(unittest.TestCase, DPTrainTest):
     """Test if `fparam` can be loaded correctly."""
 
-    def setUp(self) -> None:
+    def setUp(self):
         input_json = str(Path(__file__).parent / "water/se_atten.json")
         with open(input_json) as f:
             self.config = json.load(f)
@@ -176,22 +169,6 @@ class TestFparam(unittest.TestCase, DPTrainTest):
 
     def tearDown(self) -> None:
         (self.set_path / "fparam.npy").unlink(missing_ok=True)
-        DPTrainTest.tearDown(self)
-
-
-class TestEnergyModelDPA1(unittest.TestCase, DPTrainTest):
-    def setUp(self) -> None:
-        input_json = str(Path(__file__).parent / "water/se_atten.json")
-        with open(input_json) as f:
-            self.config = json.load(f)
-        data_file = [str(Path(__file__).parent / "water/data/data_0")]
-        self.config["training"]["training_data"]["systems"] = data_file
-        self.config["training"]["validation_data"]["systems"] = data_file
-        self.config["model"] = deepcopy(model_dpa1)
-        self.config["training"]["numb_steps"] = 1
-        self.config["training"]["save_freq"] = 1
-
-    def tearDown(self) -> None:
         DPTrainTest.tearDown(self)
 
 

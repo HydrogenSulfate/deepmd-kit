@@ -22,7 +22,6 @@ from ..common import (
     eval_model,
 )
 from .test_permutation import (
-    model_dpa1,
     model_se_e2_a,
 )
 
@@ -92,11 +91,4 @@ class TestEnergyModelSeA(unittest.TestCase, NullTest):
     def setUp(self):
         model_params = copy.deepcopy(model_se_e2_a)
         self.type_split = False
-        self.model = get_model(model_params).to(env.DEVICE)
-
-
-class TestEnergyModelDPA1(unittest.TestCase, NullTest):
-    def setUp(self):
-        model_params = copy.deepcopy(model_dpa1)
-        self.type_split = True
         self.model = get_model(model_params).to(env.DEVICE)

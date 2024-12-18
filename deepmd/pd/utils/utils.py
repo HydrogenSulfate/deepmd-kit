@@ -3,9 +3,6 @@ from __future__ import (
     annotations,
 )
 
-from contextlib import (
-    contextmanager,
-)
 from typing import (
     TYPE_CHECKING,
     overload,
@@ -15,9 +12,6 @@ import ml_dtypes
 import numpy as np
 import paddle
 import paddle.nn.functional as F
-from paddle.framework import (
-    core,
-)
 
 from deepmd.dpmodel.common import PRECISION_DICT as NP_PRECISION_DICT
 
@@ -183,16 +177,3 @@ def get_generator(
         return generator
     else:
         return None
-
-
-@contextmanager
-def nvprof_context(enable_profiler: bool, name: str):
-    if enable_profiler:
-        core.nvprof_nvtx_push(name)
-
-    try:
-        yield
-
-    finally:
-        if enable_profiler:
-            core.nvprof_nvtx_pop()
