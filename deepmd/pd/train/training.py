@@ -86,11 +86,14 @@ def format_training_message(
     batch: int,
     wall_time: float,
     eta: Optional[int] = None,
+    mem: bool = False,
 ):
     """Format a training message."""
     msg = f"batch {batch:7d}: " f"total wall time = {wall_time:.2f} s"
     if isinstance(eta, int):
         msg += f", eta = {datetime.timedelta(seconds=int(eta))!s}"
+    if mem:
+        msg += f", max_memory_allocated = {paddle.device.cuda.max_memory_allocated()>>20:.2f} MB"
     return msg
 
 
@@ -859,6 +862,7 @@ class Trainer:
                             batch=display_step_id,
                             wall_time=train_time,
                             eta=eta,
+                            mem=True,
                         )
                     )
                 # the first training time is not accurate
