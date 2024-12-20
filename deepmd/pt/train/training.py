@@ -381,7 +381,7 @@ class Trainer:
 
         # JIT
         if JIT:
-            self.model = torch.jit.script(self.model)
+            self.model = torch.compile(self.model)
 
         # Model Wrapper
         self.wrapper = ModelWrapper(self.model, self.loss, model_params=model_params)
@@ -685,6 +685,9 @@ class Trainer:
                 model_pred, loss, more_loss = self.wrapper(
                     **input_dict, cur_lr=pref_lr, label=label_dict, task_key=task_key
                 )
+                # Currently torch.compile can't support compiling double backward below
+                '''
+                # -----------------------------------------------
                 loss.backward()
                 if self.gradient_max_norm > 0.0:
                     torch.nn.utils.clip_grad_norm_(
@@ -695,6 +698,8 @@ class Trainer:
                 with torch.device("cpu"):
                     self.optimizer.step()
                 self.scheduler.step()
+                # -----------------------------------------------
+                '''
             elif self.opt_type == "LKF":
                 if isinstance(self.loss, EnergyStdLoss):
                     KFOptWrapper = KFOptimizerWrapper(
@@ -936,9 +941,11 @@ class Trainer:
         self.t0 = time.time()
         self.total_train_time = 0.0
         for step_id in range(self.start_step, self.num_steps):
+            if self.enable_profiler and step_id > self.warmup_steps: torch.cuda.nvtx.range_push(f"training step")
             step(step_id)
-            if JIT:
-                break
+            if self.enable_profiler and step_id > self.warmup_steps: torch.cuda.nvtx.range_pop()
+            #if JIT:
+            #    break
 
         if self.change_bias_after_training and (self.rank == 0 or dist.get_rank() == 0):
             if not self.multi_task:

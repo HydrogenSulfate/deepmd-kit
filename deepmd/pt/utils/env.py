@@ -31,7 +31,7 @@ if os.environ.get("DEVICE") == "cpu" or torch.cuda.is_available() is False:
 else:
     DEVICE = torch.device(f"cuda:{LOCAL_RANK}")
 
-JIT = False
+JIT = True 
 CACHE_PER_SYS = 5  # keep at most so many sets per sys in memory
 ENERGY_BIAS_TRAINABLE = True
 
