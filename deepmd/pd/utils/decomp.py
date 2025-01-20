@@ -130,7 +130,7 @@ def masked_add__decomp(
 def numel(x: paddle.Tensor) -> int:
     if paddle.in_dynamic_mode():
         return np.prod(x.shape)
-
+    # return 1
     return paddle.numel(x)
 
 

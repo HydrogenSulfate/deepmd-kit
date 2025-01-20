@@ -640,7 +640,7 @@ class Trainer:
             )
 
             build_strategy = static.BuildStrategy()
-            build_strategy.build_cinn_pass: bool = CINN
+            build_strategy.build_cinn_pass: bool = False
             self.wrapper.forward = jit.to_static(
                 full_graph=True, build_strategy=build_strategy
             )(self.wrapper.forward)
@@ -703,16 +703,33 @@ class Trainer:
                     pref_lr = _lr.start_lr
                 else:
                     pref_lr = cur_lr
+                # paddle.save(self.wrapper.state_dict(), "./input/weight.pdparam")
+                self.wrapper.set_state_dict(paddle.load("./input/weight.pdparam"))
                 with nvprof_context(enable_profiling, "Forward pass"):
+                    for k, v in input_dict.items():
+                        if isinstance(v, paddle.Tensor):
+                            input_dict[k] = paddle.load(f"./input/{k}.pddata")
+                    for k, v in label_dict.items():
+                        if isinstance(v, paddle.Tensor):
+                            label_dict[k] = paddle.load(f"./label/{k}.pddata")
                     model_pred, loss, more_loss = self.wrapper(
                         **input_dict,
                         cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
                         label=label_dict,
                         task_key=task_key,
                     )
+                    # for k, v in model_pred.items():
+                    #     print(k, f"{v.min().item():.10f}", f"{v.max().item():.10f}")
+                    # exit()
 
                 with nvprof_context(enable_profiling, "Backward pass"):
                     loss.backward()
+                for k, v in self.wrapper.named_parameters():
+                    if paddle.is_tensor(v.grad):
+                        log.info(f"{k} {v.grad.sum().item():.10f}")
+                    else:
+                        log.info(f"{k} {v.grad}")
+                exit()
 
                 if self.gradient_max_norm > 0.0:
                     with nvprof_context(enable_profiling, "Gradient clip"):

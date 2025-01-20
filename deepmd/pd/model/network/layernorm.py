@@ -101,7 +101,7 @@ class LayerNorm(nn.Layer):
             The output.
         """
         # if xx.numel() > 0:
-        if decomp.numel(xx):
+        if decomp.numel(xx) > 0:
             variance, mean = (
                 paddle.var(xx, axis=-1, unbiased=False, keepdim=True),
                 paddle.mean(xx, axis=-1, keepdim=True),
@@ -163,3 +163,31 @@ class LayerNorm(nn.Layer):
         obj.matrix = check_load_param("matrix")
         obj.bias = check_load_param("bias")
         return obj
+
+
+if __name__ == "__main__":
+    layernorm = LayerNorm(32)
+
+    x = paddle.randn([10, 32])
+    x.stop_gradient = False
+
+    def run(x_):
+        y = layernorm(x)
+        dx = paddle.grad(y, x_, create_graph=True)[0]
+        loss = (y**2 + dx**2).sum()
+        return loss
+
+    loss = run(x)
+    loss.backward()
+
+    for k, v in layernorm.named_parameters():
+        print(k, f"{v.grad.sum().item():.10f}")
+
+    layernorm.clear_gradients()
+
+    st_fun = paddle.jit.to_static(run, full_graph=True)
+    st_loss = st_fun(x)
+    st_loss.backward()
+
+    for k, v in layernorm.named_parameters():
+        print(k, f"{v.grad.sum().item():.10f}")

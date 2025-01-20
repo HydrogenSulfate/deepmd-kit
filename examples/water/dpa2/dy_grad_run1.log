@@ -1,0 +1,94 @@
+[2025-01-20 16:25:39,240] DEEPMD INFO    deepmd.pd.entrypoints.main                    DeePMD version: 3.0.1.dev100+g2347f04f.d20241221
+[2025-01-20 16:25:39,240] DEEPMD INFO    deepmd.pd.entrypoints.main                    Configuration path: input_torch_medium_debug.json
+[2025-01-20 16:25:39,381] DEEPMD INFO    deepmd.utils.summary                           _____               _____   __  __  _____           _     _  _
+[2025-01-20 16:25:39,381] DEEPMD INFO    deepmd.utils.summary                          |  __ \             |  __ \ |  \/  ||  __ \         | |   (_)| |
+[2025-01-20 16:25:39,381] DEEPMD INFO    deepmd.utils.summary                          | |  | |  ___   ___ | |__) || \  / || |  | | ______ | | __ _ | |_
+[2025-01-20 16:25:39,381] DEEPMD INFO    deepmd.utils.summary                          | |  | | / _ \ / _ \|  ___/ | |\/| || |  | ||______|| |/ /| || __|
+[2025-01-20 16:25:39,381] DEEPMD INFO    deepmd.utils.summary                          | |__| ||  __/|  __/| |     | |  | || |__| |        |   < | || |_
+[2025-01-20 16:25:39,381] DEEPMD INFO    deepmd.utils.summary                          |_____/  \___| \___||_|     |_|  |_||_____/         |_|\_\|_| \__|
+[2025-01-20 16:25:39,381] DEEPMD INFO    deepmd.utils.summary                          Please read and cite:
+[2025-01-20 16:25:39,381] DEEPMD INFO    deepmd.utils.summary                          Wang, Zhang, Han and E, Comput.Phys.Comm. 228, 178-184 (2018)
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          Zeng et al, J. Chem. Phys., 159, 054801 (2023)
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          See https://deepmd.rtfd.io/credits/ for details.
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          ---------------------------------------------------------------------------------------------------------
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          installed to:          /workspace/hesensen/anaconda3/envs/conda_py310/lib/python3.10/site-packages/deepmd
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                                                 /workspace/hesensen/deepmd_partx/deepmd-kit-tmp/deepmd
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          source:                v3.0.0-100-g2347f04f-dirty
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          source branch:         add_dpa2_v3
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          source commit:         2347f04f
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          source commit at:      2024-12-20 16:15:30 +0800
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          use float prec:        double
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          build variant:         cpu
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          Backend:               Paddle
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          PD ver:                v0.0.0-gca41a7af044
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          Enable custom OP:      False
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          running on:            yq01-qianmo-com-255-100-15.yq01.baidu.com
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          computing device:      gpu:0
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          CUDA_VISIBLE_DEVICES:  1
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          Count of visible GPUs: 1
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          num_intra_threads:     0
+[2025-01-20 16:25:39,382] DEEPMD INFO    deepmd.utils.summary                          num_inter_threads:     0
+[2025-01-20 16:25:39,383] DEEPMD INFO    deepmd.utils.summary                          ---------------------------------------------------------------------------------------------------------
+[2025-01-20 16:25:39,452] DEEPMD INFO    deepmd.pd.entrypoints.main                    Calculate neighbor statistics... (add --skip-neighbor-stat to skip this step)
+[2025-01-20 16:25:42,352] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 1024 to 2048
+[2025-01-20 16:25:42,361] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 2048 to 4096
+[2025-01-20 16:25:42,373] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 4096 to 8192
+[2025-01-20 16:25:42,392] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 8192 to 16384
+[2025-01-20 16:25:42,501] DEEPMD INFO    deepmd.utils.neighbor_stat                    training data with min nbor dist: 0.8854385688525499
+[2025-01-20 16:25:42,501] DEEPMD INFO    deepmd.utils.neighbor_stat                    training data with max nbor size: [108]
+[2025-01-20 16:25:42,509] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 1024 to 2048
+[2025-01-20 16:25:42,516] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 2048 to 4096
+[2025-01-20 16:25:42,526] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 4096 to 8192
+[2025-01-20 16:25:42,543] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 8192 to 16384
+[2025-01-20 16:25:42,641] DEEPMD INFO    deepmd.utils.neighbor_stat                    training data with min nbor dist: 0.8854385688525499
+[2025-01-20 16:25:42,642] DEEPMD INFO    deepmd.utils.neighbor_stat                    training data with max nbor size: [39]
+[2025-01-20 16:25:42,650] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 1024 to 2048
+[2025-01-20 16:25:42,657] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 2048 to 4096
+[2025-01-20 16:25:42,667] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 4096 to 8192
+[2025-01-20 16:25:42,684] DEEPMD INFO    deepmd.utils.batch_size                       Adjust batch size from 8192 to 16384
+[2025-01-20 16:25:42,782] DEEPMD INFO    deepmd.utils.neighbor_stat                    training data with min nbor dist: 0.8854385688525499
+[2025-01-20 16:25:42,782] DEEPMD INFO    deepmd.utils.neighbor_stat                    training data with max nbor size: [39]
+[2025-01-20 16:25:42,800] DEEPMD INFO    deepmd.pd.utils.env                           Enable prim in eager and static mode.
+[2025-01-20 16:25:42,871] DEEPMD INFO    deepmd.utils.env_mat_stat                     Load stats from ./dpa2.hdf5#/O H/94f442591d164744d01c2a8ec1ceaada5ac445f2.
+[2025-01-20 16:25:42,873] DEEPMD INFO    deepmd.utils.env_mat_stat                     Load stats from ./dpa2.hdf5#/O H/e9ecfa0906b6b24a96ad7bead4ef2b77de6169f5.
+[2025-01-20 16:25:43,386] DEEPMD INFO    deepmd.utils.data_system                      ---Summary of DataSystem: training     -----------------------------------------------
+[2025-01-20 16:25:43,387] DEEPMD INFO    deepmd.utils.data_system                      found 3 system(s):
+[2025-01-20 16:25:43,388] DEEPMD INFO    deepmd.utils.data_system                                                          system  natoms  bch_sz   n_bch       prob  pbc
+[2025-01-20 16:25:43,389] DEEPMD INFO    deepmd.utils.data_system                                                  ../data/data_0    192      1     80 2.500e-01   T
+[2025-01-20 16:25:43,390] DEEPMD INFO    deepmd.utils.data_system                                                  ../data/data_1    192      1    160 5.000e-01   T
+[2025-01-20 16:25:43,391] DEEPMD INFO    deepmd.utils.data_system                                                  ../data/data_2    192      1     80 2.500e-01   T
+[2025-01-20 16:25:43,391] DEEPMD INFO    deepmd.utils.data_system                      --------------------------------------------------------------------------------------
+[2025-01-20 16:25:43,401] DEEPMD INFO    deepmd.utils.data_system                      ---Summary of DataSystem: validation   -----------------------------------------------
+[2025-01-20 16:25:43,425] DEEPMD INFO    deepmd.utils.data_system                      found 1 system(s):
+[2025-01-20 16:25:43,426] DEEPMD INFO    deepmd.utils.data_system                                                          system  natoms  bch_sz   n_bch       prob  pbc
+[2025-01-20 16:25:43,427] DEEPMD INFO    deepmd.utils.data_system                                                  ../data/data_3    192      1     80 1.000e+00   T
+[2025-01-20 16:25:43,428] DEEPMD INFO    deepmd.utils.data_system                      --------------------------------------------------------------------------------------
+[2025-01-20 16:25:43,434] DEEPMD INFO    deepmd.pd.train.training                      Start to train 1000000 steps.
+[2025-01-20 16:25:43,788] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repinit.filter_layers.networks.0.layers.0.matrix 0.8731654780
+[2025-01-20 16:25:43,788] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repinit.filter_layers.networks.0.layers.0.bias -0.5884609308
+[2025-01-20 16:25:43,788] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repinit.compress_info.0 None
+[2025-01-20 16:25:43,788] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repinit.compress_data.0 None
+[2025-01-20 16:25:43,788] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.g2_embd.matrix -0.0054791162
+[2025-01-20 16:25:43,788] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.g2_embd.bias -0.0008563576
+[2025-01-20 16:25:43,789] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.linear1.matrix -0.0755235696
+[2025-01-20 16:25:43,789] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.linear1.bias -0.0046235752
+[2025-01-20 16:25:43,789] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.linear2.matrix 0.0001275758
+[2025-01-20 16:25:43,789] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.linear2.bias 0.0000339669
+[2025-01-20 16:25:43,789] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.attn2g_map.mapqk.matrix -0.0002386086
+[2025-01-20 16:25:43,790] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.attn2_mh_apply.mapv.matrix -0.0002465164
+[2025-01-20 16:25:43,790] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.attn2_mh_apply.head_map.matrix -0.0000000000
+[2025-01-20 16:25:43,790] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.attn2_mh_apply.head_map.bias -0.0000000000
+[2025-01-20 16:25:43,790] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.attn2_lm.matrix 0.0000018934
+[2025-01-20 16:25:43,790] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.attn2_lm.bias -0.0000442088
+[2025-01-20 16:25:43,791] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.g1_residual.0 -1.1553803565
+[2025-01-20 16:25:43,791] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.g2_residual.0 0.0016732004
+[2025-01-20 16:25:43,791] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.0.g2_residual.1 -0.0036322929
+[2025-01-20 16:25:43,791] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.1.linear1.matrix 0.0204031985
+[2025-01-20 16:25:43,791] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.1.linear1.bias 0.0043483437
+[2025-01-20 16:25:43,791] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.repformers.layers.1.g1_residual.0 0.4845691056
+[2025-01-20 16:25:43,792] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.type_embedding.embedding.embedding_net.layers.0.matrix 0.0098957624
+[2025-01-20 16:25:43,792] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.descriptor.g1_shape_tranform.matrix -15.4016063785
+[2025-01-20 16:25:43,792] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.fitting_net.filter_layers.networks.0.layers.0.matrix 11.2135080503
+[2025-01-20 16:25:43,792] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.fitting_net.filter_layers.networks.0.layers.0.bias -0.6559679448
+[2025-01-20 16:25:43,792] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.fitting_net.filter_layers.networks.0.layers.1.matrix 12.0452797744
+[2025-01-20 16:25:43,793] DEEPMD INFO    deepmd.pd.train.training                      model.Default.atomic_model.fitting_net.filter_layers.networks.0.layers.1.bias -1.1966743744
