@@ -370,6 +370,31 @@ def freeze(
             InputSpec([-1, -1, -1], dtype="int32", name="nlist"),
         ],
     )
+    coord = paddle.load(
+        "/workspace/hesensen/deepmd_partx/deepmd-kit-tmp/examples/water/se_e2_a/extended_coord.pddata"
+    ).numpy()
+    atype = (
+        paddle.load(
+            "/workspace/hesensen/deepmd_partx/deepmd-kit-tmp/examples/water/se_e2_a/extended_atype.pddata"
+        )
+        .numpy()
+        .astype("int64")
+    )
+    nlist = (
+        paddle.load(
+            "/workspace/hesensen/deepmd_partx/deepmd-kit-tmp/examples/water/se_e2_a/nlist.pddata"
+        )
+        .numpy()
+        .astype("int32")
+    )
+    outs = jit_model(coord, atype, nlist)
+    print(outs["energy"])
+    print(outs["extended_force"])
+    print(outs["virial"])
+    # for k, v in outs.items():
+    #     print(k, v.shape, v.dtype)
+    exit()
+
     if output.endswith(".json"):
         output = output[:-5]
     paddle.jit.save(

@@ -745,6 +745,7 @@ class DescrptBlockSeA(DescriptorBlock):
                 )
             else:
                 if rr.numel() > 0:
+                    # if True:
                     rr = rr * mm.unsqueeze(2).astype(rr.dtype)
                     ss = rr[:, :, :1]
                     if self.compress:
@@ -756,7 +757,6 @@ class DescrptBlockSeA(DescriptorBlock):
                         gg = ll.forward(ss)
                         # nfnl x 4 x ng
                         gr = paddle.matmul(rr.transpose([0, 2, 1]), gg)
-
                     if ti_mask is not None:
                         xyz_scatter[ti_mask] += gr
                     else:
