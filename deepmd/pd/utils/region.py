@@ -110,3 +110,33 @@ def normalize_coord(
     icoord = phys2inter(coord, cell)
     icoord = paddle.remainder(icoord, paddle.full([], 1.0, dtype=icoord.dtype))
     return inter2phys(icoord, cell)
+
+
+if __name__ == "__main__":
+    import paddle
+
+
+    x = paddle.to_tensor(
+        [[[12.44466114, 0.         , 0.         ],
+         [0.         , 12.44466114, 0.         ],
+         [0.         , 0.         , 12.44466114]],
+
+        [[12.44466114, 0.         , 0.         ],
+         [0.         , 12.44466114, 0.         ],
+         [0.         , 0.         , 12.44466114]],
+
+        [[12.44466114, 0.         , 0.         ],
+         [0.         , 12.44466114, 0.         ],
+         [0.         , 0.         , 12.44466114]],
+
+        [[12.44466114, 0.         , 0.         ],
+         [0.         , 12.44466114, 0.         ],
+         [0.         , 0.         , 12.44466114]],
+
+        [[12.44466114, 0.         , 0.         ],
+         [0.         , 12.44466114, 0.         ],
+         [0.         , 0.         , 12.44466114]]]
+    )
+
+    d = paddle.linalg.det(x)
+    print(d)

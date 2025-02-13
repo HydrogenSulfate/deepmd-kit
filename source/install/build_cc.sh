@@ -1,4 +1,4 @@
-set -e
+set -ex
 
 if [ "$DP_VARIANT" = "cuda" ]; then
 	CUDA_ARGS="-DUSE_CUDA_TOOLKIT=TRUE"
@@ -20,11 +20,13 @@ NPROC=$(nproc --all)
 BUILD_TMP_DIR=${SCRIPT_PATH}/../build
 mkdir -p ${BUILD_TMP_DIR}
 cd ${BUILD_TMP_DIR}
-cmake -D ENABLE_TENSORFLOW=ON \
-	-D ENABLE_PYTORCH=ON \
+DP_VARIANT=cuda DP_ENABLE_TENSORFLOW=0 DP_ENABLE_PYTORCH=0 cmake -D ENABLE_TENSORFLOW=OFF \
+	-D ENABLE_PYTORCH=OFF \
+	-D ENABLE_PADDLE=ON \
 	-D CMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
-	-D USE_TF_PYTHON_LIBS=TRUE \
+	-D USE_TF_PYTHON_LIBS=FALSE \
 	${CUDA_ARGS} \
+	-D PADDLE_INFERENCE_DIR=/work/Paddle/build/paddle_inference_install_dir \
 	-D LAMMPS_VERSION=stable_29Aug2024_update1 \
 	..
 cmake --build . -j${NPROC}
@@ -32,3 +34,26 @@ cmake --install .
 
 #------------------
 echo "Congratulations! DeePMD-kit has been installed at ${INSTALL_PREFIX}"
+
+cd ${BUILD_TMP_DIR}
+make lammps
+export LAMMPS_SOURCE_ROOT=${BUILD_TMP_DIR}/_deps/lammps_download-src/
+cd ${BUILD_TMP_DIR}/_deps/lammps_download-src/src/
+\cp -r ${BUILD_TMP_DIR}/USER-DEEPMD .
+make no-kspace
+make yes-kspace
+make no-extra-fix
+make yes-extra-fix
+# make no-user-deepmdin
+make yes-user-deepmd
+make serial -j
+# make mpi -j 10
+
+cd ${BUILD_TMP_DIR}/../../examples/water/lmp
+
+echo "START INFERENCE..."
+export PATH=/work/deepmd-kit/source/build/_deps/lammps_download-src/src:$PATH
+USE_CUDA_TOOLKIT=1 lmp_serial -in in.lammps 2>&1 | tee paddle_infer_serial.log
+# USE_CUDA_TOOLKIT=1 lmp_serial -in paddle_dpa2.lammps 2>&1 | tee paddle_infer_serial.log
+# USE_CUDA_TOOLKIT=1 lmp_serial -in paddle_se_e2_a.lammps 2>&1 | tee paddle_infer_serial.log
+# USE_CUDA_TOOLKIT=1 mpirun --allow-run-as-root -np 2 lmp_mpi -in paddle_dpa2.lammps 2>&1 | tee paddle_infer_mpi.log
