@@ -12,7 +12,7 @@ mass 		1 16
 mass		2 2
 
 # See https://deepmd.rtfd.io/lammps/ for usage
-pair_style	deepmd /work/deepmd-kit/examples/water/lmp/se_e2_a_infer.json
+pair_style	deepmd se_e2_a_infer.json
 # If atom names (O H in this example) are not set in the pair_coeff command, the type_map defined by the training parameter will be used by default.
 pair_coeff  * *	O H
 
