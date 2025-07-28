@@ -33,6 +33,9 @@ from paddle.io.dataloader.collate import (
 from deepmd.pd.utils import (
     env,
 )
+from deepmd.pd.utils.env import (
+    mesh,
+)
 from deepmd.pd.utils.dataset import (
     DeepmdDataSetForLoader,
 )
@@ -168,26 +171,27 @@ class DpLoaderSet(Dataset):
             self.batch_sizes = batch_size * np.ones(len(systems), dtype=int)
         assert len(self.systems) == len(self.batch_sizes)
         for system, batch_size in zip(self.systems, self.batch_sizes):
-            if dist.is_available() and dist.is_initialized():
-                system_batch_sampler = DistributedBatchSampler(
-                    system,
-                    shuffle=(
-                        (not (dist.is_available() and dist.is_initialized()))
-                        and shuffle
-                    ),
-                    batch_size=int(batch_size),
-                )
-                self.sampler_list.append(system_batch_sampler)
-            else:
-                system_batch_sampler = BatchSampler(
-                    system,
-                    shuffle=(
-                        (not (dist.is_available() and dist.is_initialized()))
-                        and shuffle
-                    ),
-                    batch_size=int(batch_size),
-                )
-                self.sampler_list.append(system_batch_sampler)
+            # if dist.is_available() and dist.is_initialized():
+            #     system_batch_sampler = DistributedBatchSampler(
+            #         system,
+            #         shuffle=(
+            #             (not (dist.is_available() and dist.is_initialized()))
+            #             and shuffle
+            #         ),
+            #         batch_size=int(batch_size),
+            #     )
+            #     self.sampler_list.append(system_batch_sampler)
+            # else:
+            # print(f"batch_size = {batch_size}")
+            system_batch_sampler = BatchSampler(
+                system,
+                shuffle=(
+                    (not (dist.is_available() and dist.is_initialized()))
+                    and shuffle
+                ),
+                batch_size=int(batch_size),
+            )
+            self.sampler_list.append(system_batch_sampler)
             system_dataloader = DataLoader(
                 dataset=system,
                 num_workers=0,  # Should be 0 to avoid too many threads forked

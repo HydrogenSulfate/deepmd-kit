@@ -28,6 +28,9 @@ from deepmd.pd.utils import (
 from deepmd.pd.utils.env import (
     PRECISION_DICT,
 )
+from deepmd.pd.utils.decomp import (
+    norm,
+)
 from deepmd.pd.utils.env_mat_stat import (
     EnvMatStatSe,
 )
@@ -442,11 +445,11 @@ class DescrptBlockRepflows(DescriptorBlock):
         sw = sw.masked_fill(~nlist_mask, 0.0)
 
         # get angle nlist (maybe smaller)
-        a_dist_mask = (paddle.linalg.norm(diff, axis=-1) < self.a_rcut)[
+        a_dist_mask = (norm(diff, axis=-1) < self.a_rcut)[
             :, :, : self.a_sel
         ]
         a_nlist = nlist[:, :, : self.a_sel]
-        a_nlist = paddle.where(a_dist_mask, a_nlist, -1)
+        a_nlist = paddle.where(a_dist_mask.squeeze(-1), a_nlist, paddle.full(a_nlist.shape, -1, dtype=a_nlist.dtype))
         _, a_diff, a_sw = prod_env_mat(
             extended_coord,
             a_nlist,
@@ -482,11 +485,11 @@ class DescrptBlockRepflows(DescriptorBlock):
         edge_input, h2 = paddle.split(dmatrix, [1, 3], axis=-1)
         if self.edge_init_use_dist:
             # nb x nloc x nnei x 1
-            edge_input = paddle.linalg.norm(diff, axis=-1, keepdim=True)
+            edge_input = norm(diff, axis=-1, keepdim=True)
 
         # nf x nloc x a_nnei x 3
         normalized_diff_i = a_diff / (
-            paddle.linalg.norm(a_diff, axis=-1, keepdim=True) + 1e-6
+            norm(a_diff, axis=-1, keepdim=True) + 1e-6
         )
         # nf x nloc x 3 x a_nnei
         normalized_diff_j = paddle.transpose(normalized_diff_i, [0, 1, 3, 2])

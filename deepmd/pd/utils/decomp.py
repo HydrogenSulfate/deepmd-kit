@@ -18,6 +18,7 @@ __all__ = [
     "numel",
     "scatter_reduce",
     "sec",
+    "norm",
 ]
 
 
@@ -133,6 +134,10 @@ def numel(x: paddle.Tensor) -> int:
 
     return paddle.numel(x)
 
+
+def norm(x, axis, keepdim=True):
+    y = paddle.sum(x * x, axis=axis, keepdim=keepdim).sqrt()
+    return y
 
 # alias for decomposed functions for convinience
 masked_add_ = masked_add__decomp

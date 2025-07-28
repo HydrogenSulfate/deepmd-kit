@@ -12,6 +12,10 @@ from typing import (
 )
 
 import paddle
+from paddle import distributed as dist
+from deepmd.pd.utils.env import (
+    mesh,
+)
 
 _StateDict = Union[dict[str, paddle.Tensor], OrderedDict[str, paddle.Tensor]]
 
@@ -149,6 +153,22 @@ class ModelWrapper(paddle.nn.Layer):
         fparam: paddle.Tensor | None = None,
         aparam: paddle.Tensor | None = None,
     ):
+        # print(f"[liyamei check] shape: {coord.shape}, atype shape: {atype.shape}, box shape: {box.shape}")
+        coord = dist.shard_tensor(coord, mesh, [dist.Shard(0)]) # 标记输入数据沿第 0 维切分
+        atype = dist.shard_tensor(atype, mesh, [dist.Shard(0)]) # 标记输入数据沿第 0 维切分
+        box = dist.shard_tensor(box, mesh, [dist.Shard(0)]) # 标记输入数据沿第 0 维切分
+        print(f"coord.shape = {coord.shape} {coord._local_value().shape}")
+        print(f"atype.shape = {atype.shape} {atype._local_value().shape}")
+        print(f"box.shape = {box.shape} {box._local_value().shape}")
+        if isinstance(label, dict):
+            for k, v in label.items():
+                if paddle.is_tensor(v):
+                    label[k] = dist.shard_tensor(v, mesh, [dist.Shard(0)])
+                    print(f"label[k].shape = {label[k].shape} {label[k]._local_value().shape}")
+
+
+         # print(f"[liyamei check] local shape: {coord._local_value().shape}, atype shape: {atype._local_value().shape}, box shape: {box._local_value().shape}")
+
         if not self.multi_task:
             task_key = "Default"
         else:

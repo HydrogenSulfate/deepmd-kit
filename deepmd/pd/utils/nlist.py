@@ -24,19 +24,27 @@ def extend_input_and_build_neighbor_list(
     mixed_types: bool = False,
     box: Optional[paddle.Tensor] = None,
 ):
+    # print(f"[liyamei check extend_input_and_build_neighbor_list]\ncoord={coord}")
     nframes, nloc = atype.shape[:2]
     if box is not None:
         box_gpu = box
+        # print(f"[liyamei check extend_input_and_build_neighbor_list]\n coord is_dist={coord.is_dist()}")
+        print(f"coord.shape = {coord.shape}, box_gpu.shape = {box_gpu.shape}, nframes = {nframes}, nloc = {nloc}")
         coord_normalized = normalize_coord(
             coord.reshape([nframes, nloc, 3]),
             box_gpu.reshape([nframes, 3, 3]),
         )
+        # print(f"[liyamei check extend_input_and_build_neighbor_list]\n coord_normalized is_dist={coord_normalized.is_dist()}")
     else:
         box_gpu = None
         coord_normalized = coord.clone()
+    print(f"coord_normalized = {coord_normalized.shape} {coord_normalized._local_value().shape}")
     extended_coord, extended_atype, mapping = extend_coord_with_ghosts(
         coord_normalized, atype, box_gpu, rcut, box
     )
+
+    # print(f"[liyamei check extend_input_and_build_neighbor_list]\n extended_coord={extended_coord}")
+    print(f"extended_coord = {extended_coord.shape} {extended_coord._local_value().shape}")
     nlist = build_neighbor_list(
         extended_coord,
         extended_atype,
@@ -93,6 +101,7 @@ def build_neighbor_list(
         For virtual atoms all neighboring positions are filled with -1.
 
     """
+    print(f"init coord.shape = {coord.shape}")
     batch_size = coord.shape[0]
     coord = coord.reshape([batch_size, -1])
     nall = coord.shape[1] // 3
@@ -106,9 +115,11 @@ def build_neighbor_list(
         xmax = paddle.zeros([], dtype=coord.dtype).to(device=coord.place) + 2.0 * rcut
     # nf x nall
     is_vir = atype < 0
+    print(coord.shape)
+    print(coord.reshape([1, -1, 3]).shape)
     coord1 = paddle.where(
-        is_vir[:, :, None], xmax, coord.reshape([batch_size, nall, 3])
-    ).reshape([batch_size, nall * 3])
+        is_vir[:, :, None], xmax, coord.reshape([batch_size, -1, 3])
+    ).reshape([batch_size, -1])
     if isinstance(sel, int):
         sel = [sel]
     # nloc x 3
@@ -449,6 +460,7 @@ def extend_coord_with_ghosts(
         maping extended index to the local index
 
     """
+    # print(f"[liyamei check] coord={coord}")
     device = coord.place
     nf, nloc = atype.shape[:2]
     # int64 for index
@@ -469,28 +481,43 @@ def extend_coord_with_ghosts(
         # +1: central cell
         nbuff = paddle.ceil(rcut / to_face)
         INT64_MIN = -9223372036854775808
+        # print(f"1 nbuff = {nbuff.shape}")
         nbuff = paddle.where(
             paddle.isinf(nbuff),
             paddle.full_like(nbuff, INT64_MIN, dtype=paddle.int64),
             nbuff.astype(paddle.int64),
         )
+        # print(f"2 nbuff = {nbuff.shape}")
         # 3
         nbuff = paddle.amax(nbuff, axis=0)
+        # print(f"3 nbuff = {nbuff.shape}")
         nbuff_cpu = nbuff.cpu()
+        # print(f"nbuff_cpu = {nbuff_cpu}")
+        # print(f"nbuff_cpu[0] = {nbuff_cpu[0]}")
+        # print(f"nbuff_cpu[0] + 1 = {(nbuff_cpu[0] + 1)}")
+        # xi_1 = paddle.arange(-nbuff_cpu[0], nbuff_cpu[0] + 1, 1)
+        # xi_2 = (xi_1.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION))
+        # print(f"xi_1 = {xi_1}")
+        # print(f"xi_2 = {xi_2}")
+        # print(f"xi_1.shape = {xi_1.shape}")
+        # print(f"xi_2.shape = {xi_2.shape}")
+        # exit(188)
         xi = (
-            paddle.arange(-nbuff_cpu[0], nbuff_cpu[0] + 1, 1).to(
+            paddle.arange(-nbuff_cpu[0].item(), nbuff_cpu[0].item() + 1, 1).to(
                 dtype=env.GLOBAL_PD_FLOAT_PRECISION
             )
             # .cpu()
         )  # pylint: disable=no-explicit-dtype
+        # print(f"xi.shape = {xi.shape}")
+
         yi = (
-            paddle.arange(-nbuff_cpu[1], nbuff_cpu[1] + 1, 1).to(
+            paddle.arange(-nbuff_cpu[1].item(), nbuff_cpu[1].item() + 1, 1).to(
                 dtype=env.GLOBAL_PD_FLOAT_PRECISION
             )
             # .cpu()
         )  # pylint: disable=no-explicit-dtype
         zi = (
-            paddle.arange(-nbuff_cpu[2], nbuff_cpu[2] + 1, 1).to(
+            paddle.arange(-nbuff_cpu[2].item(), nbuff_cpu[2].item() + 1, 1).to(
                 dtype=env.GLOBAL_PD_FLOAT_PRECISION
             )
             # .cpu()
@@ -502,6 +529,7 @@ def extend_coord_with_ghosts(
             # .cpu()
         )
         xyz = xi.reshape([-1, 1, 1, 1]) * eye_3[0]
+        # print(f"xi.shape, xyz.shape = {xi.shape, xyz.shape}")
         xyz = xyz + yi.reshape([1, -1, 1, 1]) * eye_3[1]
         xyz = xyz + zi.reshape([1, 1, -1, 1]) * eye_3[2]
         xyz = xyz.reshape([-1, 3])
@@ -510,14 +538,23 @@ def extend_coord_with_ghosts(
         shift_idx = xyz[paddle.argsort(paddle.norm(xyz, axis=1))]
         ns, _ = shift_idx.shape
         nall = ns * nloc
+        # print(f"ns = {ns}, nloc = {nloc}")
         # nf x ns x 3
-        shift_vec = paddle.einsum("sd,fdk->fsk", shift_idx, cell)
+        # print(f"\n\n\n[liyamei check] shift_idx={shift_idx.shape} is_dist={shift_idx.is_dist()}\ncell={cell.shape} is_dist={cell.is_dist()}\n")
+        # exit(27)
+        # shift_vec = paddle.einsum("sd,fdk->fsk", shift_idx, cell)
+        shift_vec = shift_idx @ cell
         # nf x ns x nloc x 3
         extend_coord = coord[:, None, :, :] + shift_vec[:, :, None, :]
         # nf x ns x nloc
-        extend_atype = paddle.tile(atype.unsqueeze(-2), [1, ns, 1])
+        # extend_atype = paddle.tile(atype.unsqueeze(-2), [1, ns, 1])
+        # print(1)
+        extend_atype = paddle.expand(atype.unsqueeze(-2), [-1, ns, -1])
         # nf x ns x nloc
-        extend_aidx = paddle.tile(aidx.unsqueeze(-2), [1, ns, 1])
+        # extend_aidx = paddle.tile(aidx.unsqueeze(-2), [1, ns, 1])
+        # print(aidx.unsqueeze(-2).shape)
+        extend_aidx = paddle.expand(aidx.unsqueeze(-2), [-1, ns, -1])
+    # print(f"nall = {nall}")
     return (
         extend_coord.reshape([nf, nall * 3]).to(device),
         extend_atype.reshape([nf, nall]).to(device),

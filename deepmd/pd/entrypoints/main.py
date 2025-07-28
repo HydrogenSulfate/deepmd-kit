@@ -91,10 +91,10 @@ def get_trainer(
     multi_task = "model_dict" in config.get("model", {})
 
     # Initialize DDP
-    world_size = dist.get_world_size()
-    if world_size > 1:
-        assert paddle.version.nccl() != "0"
-        fleet.init(is_collective=True)
+    # world_size = dist.get_world_size()
+    # if world_size > 1:
+    #     assert paddle.version.nccl() != "0"
+    #     fleet.init(is_collective=True)
 
     def prepare_trainer_input_single(
         model_params_single, data_dict_single, rank=0, seed=None

@@ -178,6 +178,7 @@ def make_model(T_AtomicModel: type[BaseAtomicModel]):
                 mixed_types=True,
                 box=bb,
             )
+            print(f"extended_coord.shape = {extended_coord.shape}")
             model_predict_lower = self.forward_common_lower(
                 extended_coord,
                 extended_atype,
@@ -339,10 +340,10 @@ def make_model(T_AtomicModel: type[BaseAtomicModel]):
             else:
                 pp = self.global_pd_float_precision
                 return (
-                    coord.to(pp),
-                    box.to(pp) if box is not None else None,
-                    fparam.to(pp) if fparam is not None else None,
-                    aparam.to(pp) if aparam is not None else None,
+                    coord.astype(dtype=pp),
+                    box.astype(dtype=pp) if box is not None else None,
+                    fparam.astype(dtype=pp) if fparam is not None else None,
+                    aparam.astype(dtype=pp) if aparam is not None else None,
                     input_prec,
                 )
 

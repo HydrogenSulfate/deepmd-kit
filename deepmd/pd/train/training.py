@@ -16,10 +16,10 @@ from typing import (
 import numpy as np
 import paddle
 import paddle.distributed as dist
-from paddle.distributed import (
-    fleet,
-)
-from paddle.distributed.fleet.utils import hybrid_parallel_util as hpu
+# from paddle.distributed import (
+#     fleet,
+# )
+# from paddle.distributed.fleet.utils import hybrid_parallel_util as hpu
 from paddle.framework import (
     core,
 )
@@ -61,6 +61,7 @@ from deepmd.pd.utils.env import (
     NUM_WORKERS,
     SAMPLER_RECORD,
     enable_prim,
+    mesh,
 )
 from deepmd.pd.utils.learning_rate import (
     LearningRateExp,
@@ -124,11 +125,13 @@ class Trainer:
         self.rank = (
             dist.get_rank() if dist.is_available() and dist.is_initialized() else 0
         )
-        self.world_size = (
-            dist.get_world_size()
-            if dist.is_available() and dist.is_initialized()
-            else 1
-        )
+        from paddle.distributed import fleet
+        fleet.init(is_collective=True)
+        # self.world_size = (
+        #     dist.get_world_size()
+        #     if dist.is_available() and dist.is_initialized()
+        #     else 1
+        # )
         self.num_model = len(self.model_keys)
 
         # Iteration config
@@ -670,13 +673,13 @@ class Trainer:
                     "CINN_ALLOW_DYNAMIC_SHAPE=1 to enable dynamic shape support."
                 )
 
-        if dist.is_available() and dist.is_initialized():
+        # if dist.is_available() and dist.is_initialized():
             # DDP will guarantee the model parameters are identical across all processes
-            self.wrapper = fleet.distributed_model(
-                self.wrapper,
-                # find_unused_parameters=True,
-            )
-            self.optimizer = fleet.distributed_optimizer(self.optimizer)
+            # self.wrapper = fleet.distributed_model(
+            #     self.wrapper,
+            #     # find_unused_parameters=True,
+            # )
+            # self.optimizer = fleet.distributed_optimizer(self.optimizer)
 
         # Get model prob for multi-task
         if self.multi_task:
@@ -715,8 +718,8 @@ class Trainer:
             record_file = f"Sample_rank_{self.rank}.txt"
             fout1 = open(record_file, mode="w", buffering=1)
         log.info("Start to train %d steps.", self.num_steps)
-        if dist.is_available() and dist.is_initialized():
-            log.info(f"Rank: {dist.get_rank()}/{dist.get_world_size()}")
+        # if dist.is_available() and dist.is_initialized():
+            # log.info(f"Rank: {dist.get_rank()}/{dist.get_world_size()}")
         if self.enable_tensorboard:
             from tensorboardX import (
                 SummaryWriter,
@@ -750,6 +753,9 @@ class Trainer:
                 input_dict, label_dict, log_dict = self.get_data(
                     is_train=True, task_key=task_key
                 )
+                for k,v in label_dict.items():
+                    if isinstance(v, paddle.Tensor):
+                        print(k, v.shape)
             if SAMPLER_RECORD:
                 print_str = f"Step {_step_id}: sample system{log_dict['sid']}  frame{log_dict['fid']}\n"
                 fout1.write(print_str)
@@ -763,27 +769,27 @@ class Trainer:
 
                 # disable synchronization in forward-backward manually
                 # as derivatives exist in model forward
-                no_sync_context = (
-                    self.wrapper.no_sync
-                    if self.world_size > 1
-                    else contextlib.nullcontext
-                )
-                with no_sync_context():
-                    with nvprof_context(enable_profiling, "Forward pass"):
-                        model_pred, loss, more_loss = self.wrapper(
-                            **input_dict,
-                            cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
-                            label=label_dict,
-                            task_key=task_key,
-                        )
+                # no_sync_context = (
+                #     self.wrapper.no_sync
+                #     if self.world_size > 1
+                #     else contextlib.nullcontext
+                # )
+                # with no_sync_context():
+                with nvprof_context(enable_profiling, "Forward pass"):
+                    model_pred, loss, more_loss = self.wrapper(
+                        **input_dict,
+                        cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
+                        label=label_dict,
+                        task_key=task_key,
+                    )
 
-                    with nvprof_context(enable_profiling, "Backward pass"):
-                        loss.backward()
+                with nvprof_context(enable_profiling, "Backward pass"):
+                    loss.backward()
 
                 # fuse + allreduce manually before optimization if use DDP + no_sync
                 # details in https://github.com/PaddlePaddle/Paddle/issues/48898#issuecomment-1343838622
-                if self.world_size > 1:
-                    hpu.fused_allreduce_gradients(list(self.wrapper.parameters()), None)
+                # if self.world_size > 1:
+                #     hpu.fused_allreduce_gradients(list(self.wrapper.parameters()), None)
 
                 if self.gradient_max_norm > 0.0:
                     with nvprof_context(enable_profiling, "Gradient clip"):

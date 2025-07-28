@@ -115,6 +115,7 @@ DEFAULT_PRECISION = "float64"
 # throw warnings if threads not set
 set_default_nthreads()
 inter_nthreads, intra_nthreads = get_default_nthreads()
+mesh = paddle.distributed.ProcessMesh([0, 1, 2, 3], dim_names=['dp']) # 定义计算资源
 # if inter_nthreads > 0:  # the behavior of 0 is not documented
 #     os.environ['OMP_NUM_THREADS'] = str(inter_nthreads)
 # if intra_nthreads > 0:
@@ -180,6 +181,7 @@ def enable_prim(enable: bool = True):
         "multiply_grad",
         "subtract_grad",
         "tile_grad",
+        # "p_norm_grad",
     ]
     EAGER_COMP_OP_BLACK_LIST = list(set(EAGER_COMP_OP_BLACK_LIST))
 
@@ -223,4 +225,5 @@ __all__ = [
     "RESERVED_PRECISION_DICT",
     "SAMPLER_RECORD",
     "enable_prim",
+    "mesh",
 ]

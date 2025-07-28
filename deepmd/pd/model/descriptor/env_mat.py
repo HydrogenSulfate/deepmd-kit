@@ -6,7 +6,7 @@ from deepmd.pd.utils.preprocess import (
     compute_exp_sw,
     compute_smooth_weight,
 )
-
+from deepmd.pd.utils.decomp import norm
 
 def _make_env_mat(
     nlist,
@@ -30,7 +30,8 @@ def _make_env_mat(
     coord_r = paddle.take_along_axis(coord_pad, axis=1, indices=index)
     coord_r = coord_r.reshape([bsz, natoms, nnei, 3])
     diff = coord_r - coord_l
-    length = paddle.linalg.norm(diff, axis=-1, keepdim=True)
+    # length = paddle.linalg.norm(diff, axis=-1, keepdim=True)
+    length = norm(diff, axis=-1, keepdim=True)
     # for index 0 nloc atom
     length = length + (~mask.unsqueeze(-1)).astype(length.dtype)
     t0 = 1 / (length + protection)
