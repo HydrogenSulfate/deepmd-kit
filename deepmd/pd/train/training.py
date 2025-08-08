@@ -753,21 +753,26 @@ class Trainer:
                     is_train=True, task_key=task_key
                 )
                 while (
-                    input_dict["coord"].shape[0] < 32 or
-                    input_dict["atype"].shape[0] < 32 or
-                    input_dict["box"].shape[0] < 32
+                    input_dict["coord"].shape[0] < 32
+                    or input_dict["atype"].shape[0] < 32
+                    or input_dict["box"].shape[0] < 32
                 ):
                     if input_dict["coord"].shape[0] < 32:
-                        print(f'retry input_dict["coord"].shape = {input_dict["coord"].shape}')
+                        print(
+                            f'retry input_dict["coord"].shape = {input_dict["coord"].shape}'
+                        )
                     if input_dict["atype"].shape[0] < 32:
-                        print(f'retry input_dict["atype"].shape = {input_dict["atype"].shape}')
+                        print(
+                            f'retry input_dict["atype"].shape = {input_dict["atype"].shape}'
+                        )
                     if input_dict["box"].shape[0] < 32:
-                        print(f'retry input_dict["box"].shape = {input_dict["box"].shape}')
+                        print(
+                            f'retry input_dict["box"].shape = {input_dict["box"].shape}'
+                        )
 
                     input_dict, label_dict, log_dict = self.get_data(
                         is_train=True, task_key=task_key
                     )
-
 
             if SAMPLER_RECORD:
                 print_str = f"Step {_step_id}: sample system{log_dict['sid']}  frame{log_dict['fid']}\n"
