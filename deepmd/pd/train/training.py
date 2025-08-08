@@ -751,6 +751,14 @@ class Trainer:
                 input_dict, label_dict, log_dict = self.get_data(
                     is_train=True, task_key=task_key
                 )
+                while input_dict["coord"].shape[0] < 32:
+                    input_dict, label_dict, log_dict = self.get_data(
+                        is_train=True, task_key=task_key
+                    )
+                    log.warning(
+                        f"retry fetching data for cur bs = {input_dict['coord'].shape[0]}"
+                    )
+
             if SAMPLER_RECORD:
                 print_str = f"Step {_step_id}: sample system{log_dict['sid']}  frame{log_dict['fid']}\n"
                 fout1.write(print_str)
