@@ -196,6 +196,12 @@ class DpLoaderSet(Dataset):
                 # use_buffer_reader=False,
                 # places=["cpu"],
             )
+            data = next(iter(system_dataloader))
+            for k, v in data.items():
+                if isinstance(v, paddle.Tensor):
+                    print(k, v.shape)
+            print(system_batch_sampler.batch_size)
+            exit()
             self.dataloaders.append(system_dataloader)
             self.index.append(len(system_dataloader))
             self.total_batch += len(system_dataloader)
