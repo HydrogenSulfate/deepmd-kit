@@ -786,17 +786,17 @@ class Trainer:
                 # details in https://github.com/PaddlePaddle/Paddle/issues/48898#issuecomment-1343838622
                 # if self.world_size > 1:
                 #     hpu.fused_allreduce_gradients(list(self.wrapper.parameters()), None)
-                dist.barrier()
+                # dist.barrier()
                 with nvprof_context(enable_profiling, "Forward pass"):
                     for __key in ("coord", "atype", "box"):
-                        print(f"Input key: {__key}, shape: {input_dict[__key].shape}")
+                        # print(f"Input key: {__key}, shape: {input_dict[__key].shape}")
                         input_dict[__key] = dist.shard_tensor(
                             input_dict[__key],
                             mesh=dist.get_mesh(),
                             placements=[dist.Shard(0)],
                         )
                     for __key, _ in label_dict.items():
-                        print(f"Input key: {__key}, shape: {label_dict[__key].shape}")
+                        # print(f"Input key: {__key}, shape: {label_dict[__key].shape}")
                         if isinstance(label_dict[__key], paddle.Tensor):
                             label_dict[__key] = dist.shard_tensor(
                                 label_dict[__key],
@@ -861,6 +861,21 @@ class Trainer:
                         if input_dict == {}:
                             # no validation data
                             return {}
+                        for __key in ("coord", "atype", "box"):
+                            # print(f"Input key: {__key}, shape: {input_dict[__key].shape}")
+                            input_dict[__key] = dist.shard_tensor(
+                                input_dict[__key],
+                                mesh=dist.get_mesh(),
+                                placements=[dist.Shard(0)],
+                            )
+                        for __key, _ in label_dict.items():
+                            # print(f"Input key: {__key}, shape: {label_dict[__key].shape}")
+                            if isinstance(label_dict[__key], paddle.Tensor):
+                                label_dict[__key] = dist.shard_tensor(
+                                    label_dict[__key],
+                                    mesh=dist.get_mesh(),
+                                    placements=[dist.Shard(0)],
+                                )
                         _, loss, more_loss = self.wrapper(
                             **input_dict,
                             cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
