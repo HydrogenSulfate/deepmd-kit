@@ -47,7 +47,6 @@ from deepmd.pd.utils import (
     dp_random,
 )
 from deepmd.pd.utils.dataloader import (
-    BufferedIterator,
     get_sampler_from_params,
 )
 from deepmd.pd.utils.env import (
@@ -176,7 +175,7 @@ class Trainer:
                     else 0,  # setting to 0 diverges the behavior of its iterator; should be >=1
                     collate_fn=lambda batch: batch[0],  # prevent extra conversion
                 )
-                _data_buffered = BufferedIterator(iter(_dataloader))
+                _data_buffered = iter(_dataloader)
                 return _dataloader, _data_buffered
 
             training_dataloader, training_data_buffered = get_dataloader_and_buffer(
@@ -1120,9 +1119,7 @@ class Trainer:
                     batch_data = next(iter(self.training_data))
                 except StopIteration:
                     # Refresh the status of the dataloader to start from a new epoch
-                    self.training_data = BufferedIterator(
-                        iter(self.training_dataloader)
-                    )
+                    self.training_data = iter(self.training_dataloader)
                     batch_data = next(iter(self.training_data))
             else:
                 if self.validation_data is None:
@@ -1130,9 +1127,7 @@ class Trainer:
                 try:
                     batch_data = next(iter(self.validation_data))
                 except StopIteration:
-                    self.validation_data = BufferedIterator(
-                        iter(self.validation_dataloader)
-                    )
+                    self.validation_data = iter(self.validation_dataloader)
                     batch_data = next(iter(self.validation_data))
         else:
             if is_train:
@@ -1140,8 +1135,8 @@ class Trainer:
                     batch_data = next(iter(self.training_data[task_key]))
                 except StopIteration:
                     # Refresh the status of the dataloader to start from a new epoch
-                    self.training_data[task_key] = BufferedIterator(
-                        iter(self.training_dataloader[task_key])
+                    self.training_data[task_key] = iter(
+                        self.training_dataloader[task_key]
                     )
                     batch_data = next(iter(self.training_data[task_key]))
             else:
@@ -1150,8 +1145,8 @@ class Trainer:
                 try:
                     batch_data = next(iter(self.validation_data[task_key]))
                 except StopIteration:
-                    self.validation_data[task_key] = BufferedIterator(
-                        iter(self.validation_dataloader[task_key])
+                    self.validation_data[task_key] = iter(
+                        self.validation_dataloader[task_key]
                     )
                     batch_data = next(iter(self.validation_data[task_key]))
 
