@@ -757,10 +757,16 @@ class Trainer:
                     input_dict["atype"].shape[0] < 32 or
                     input_dict["box"].shape[0] < 32
                 ):
+                    if input_dict["coord"].shape[0] < 32:
+                        print(f'retry input_dict["coord"].shape = {input_dict["coord"].shape}')
+                    if input_dict["atype"].shape[0] < 32:
+                        print(f'retry input_dict["atype"].shape = {input_dict["atype"].shape}')
+                    if input_dict["box"].shape[0] < 32:
+                        print(f'retry input_dict["box"].shape = {input_dict["box"].shape}')
+
                     input_dict, label_dict, log_dict = self.get_data(
                         is_train=True, task_key=task_key
                     )
-                    print('retry')
 
 
             if SAMPLER_RECORD:
@@ -800,14 +806,14 @@ class Trainer:
                 # dist.barrier()
                 with nvprof_context(enable_profiling, "Forward pass"):
                     for __key in ("coord", "atype", "box"):
-                        print(f"[Trn] Input key: {__key}, shape: {input_dict[__key].shape}")
+                        # print(f"[Trn] Input key: {__key}, shape: {input_dict[__key].shape}")
                         input_dict[__key] = dist.shard_tensor(
                             input_dict[__key],
                             mesh=dist.get_mesh(),
                             placements=[dist.Shard(0)],
                         )
                     for __key, _ in label_dict.items():
-                        print(f"[Trn] Label key: {__key}, shape: {label_dict[__key].shape}")
+                        # print(f"[Trn] Label key: {__key}, shape: {label_dict[__key].shape}")
                         if isinstance(label_dict[__key], paddle.Tensor):
                             label_dict[__key] = dist.shard_tensor(
                                 label_dict[__key],
@@ -873,14 +879,14 @@ class Trainer:
                             # no validation data
                             return {}
                         for __key in ("coord", "atype", "box"):
-                            print(f"[Val] Input key: {__key}, shape: {input_dict[__key].shape}")
+                            # print(f"[Val] Input key: {__key}, shape: {input_dict[__key].shape}")
                             input_dict[__key] = dist.shard_tensor(
                                 input_dict[__key],
                                 mesh=dist.get_mesh(),
                                 placements=[dist.Shard(0)],
                             )
                         for __key, _ in label_dict.items():
-                            print(f"[Val] Label key: {__key}, shape: {label_dict[__key].shape}")
+                            # print(f"[Val] Label key: {__key}, shape: {label_dict[__key].shape}")
                             if isinstance(label_dict[__key], paddle.Tensor):
                                 label_dict[__key] = dist.shard_tensor(
                                     label_dict[__key],
