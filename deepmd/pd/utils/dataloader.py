@@ -182,7 +182,8 @@ class DpLoaderSet(Dataset):
             system_batch_sampler = BatchSampler(
                 system,
                 shuffle=(
-                    (not (dist.is_available() and dist.is_initialized())) and shuffle
+                    (not (dist.is_available() and dist.is_initialized()))
+                    and shuffle
                 ),
                 batch_size=int(batch_size),
             )
@@ -218,7 +219,7 @@ class DpLoaderSet(Dataset):
         self.iters = []
 
         for item in self.dataloaders:
-            self.iters.append(iter(item))
+            self.iters.append(LazyIter(item))
 
     def set_noise(self, noise_settings):
         # noise_settings['noise_type'] # "trunc_normal", "normal", "uniform"
