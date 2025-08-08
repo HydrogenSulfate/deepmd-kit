@@ -100,7 +100,7 @@ class Trainer:
         Args:
         - config: The Dict-like configuration with training options.
         """
-        mesh_dims = [("dp", dist.get_world_size())]
+        mesh_dims = [("dp", 32)]
         fleet.auto.create_mesh(mesh_dims)
         fleet.init(is_collective=True)
         enable_prim(True)
