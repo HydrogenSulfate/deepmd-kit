@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-import contextlib
 import functools
 import logging
 import time
@@ -19,7 +18,6 @@ import paddle.distributed as dist
 from paddle.distributed import (
     fleet,
 )
-from paddle.distributed.fleet.utils import hybrid_parallel_util as hpu
 from paddle.framework import (
     core,
 )
@@ -102,6 +100,9 @@ class Trainer:
         Args:
         - config: The Dict-like configuration with training options.
         """
+        mesh_dims = [("dp", 32)]
+        fleet.auto.create_mesh(mesh_dims)
+        fleet.init(is_collective=True)
         enable_prim(True)
         if init_model is not None:
             resume_model = init_model
@@ -129,6 +130,7 @@ class Trainer:
             if dist.is_available() and dist.is_initialized()
             else 1
         )
+
         self.num_model = len(self.model_keys)
 
         # Iteration config
@@ -763,27 +765,53 @@ class Trainer:
 
                 # disable synchronization in forward-backward manually
                 # as derivatives exist in model forward
-                no_sync_context = (
-                    self.wrapper.no_sync
-                    if self.world_size > 1
-                    else contextlib.nullcontext
-                )
-                with no_sync_context():
-                    with nvprof_context(enable_profiling, "Forward pass"):
-                        model_pred, loss, more_loss = self.wrapper(
-                            **input_dict,
-                            cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
-                            label=label_dict,
-                            task_key=task_key,
-                        )
+                # no_sync_context = (
+                #     self.wrapper.no_sync
+                #     if self.world_size > 1
+                #     else contextlib.nullcontext
+                # )
+                # with no_sync_context():
+                #     with nvprof_context(enable_profiling, "Forward pass"):
+                #         model_pred, loss, more_loss = self.wrapper(
+                #             **input_dict,
+                #             cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
+                #             label=label_dict,
+                #             task_key=task_key,
+                #         )
 
-                    with nvprof_context(enable_profiling, "Backward pass"):
-                        loss.backward()
+                #     with nvprof_context(enable_profiling, "Backward pass"):
+                #         loss.backward()
 
                 # fuse + allreduce manually before optimization if use DDP + no_sync
                 # details in https://github.com/PaddlePaddle/Paddle/issues/48898#issuecomment-1343838622
-                if self.world_size > 1:
-                    hpu.fused_allreduce_gradients(list(self.wrapper.parameters()), None)
+                # if self.world_size > 1:
+                #     hpu.fused_allreduce_gradients(list(self.wrapper.parameters()), None)
+                # dist.barrier()
+                with nvprof_context(enable_profiling, "Forward pass"):
+                    for __key in ("coord", "atype", "box"):
+                        # print(f"Input key: {__key}, shape: {input_dict[__key].shape}")
+                        input_dict[__key] = dist.shard_tensor(
+                            input_dict[__key],
+                            mesh=dist.get_mesh(),
+                            placements=[dist.Shard(0)],
+                        )
+                    for __key, _ in label_dict.items():
+                        # print(f"Input key: {__key}, shape: {label_dict[__key].shape}")
+                        if isinstance(label_dict[__key], paddle.Tensor):
+                            label_dict[__key] = dist.shard_tensor(
+                                label_dict[__key],
+                                mesh=dist.get_mesh(),
+                                placements=[dist.Shard(0)],
+                            )
+                    model_pred, loss, more_loss = self.wrapper(
+                        **input_dict,
+                        cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
+                        label=label_dict,
+                        task_key=task_key,
+                    )
+
+                with nvprof_context(enable_profiling, "Backward pass"):
+                    loss.backward()
 
                 if self.gradient_max_norm > 0.0:
                     with nvprof_context(enable_profiling, "Gradient clip"):
@@ -833,6 +861,21 @@ class Trainer:
                         if input_dict == {}:
                             # no validation data
                             return {}
+                        for __key in ("coord", "atype", "box"):
+                            # print(f"Input key: {__key}, shape: {input_dict[__key].shape}")
+                            input_dict[__key] = dist.shard_tensor(
+                                input_dict[__key],
+                                mesh=dist.get_mesh(),
+                                placements=[dist.Shard(0)],
+                            )
+                        for __key, _ in label_dict.items():
+                            # print(f"Input key: {__key}, shape: {label_dict[__key].shape}")
+                            if isinstance(label_dict[__key], paddle.Tensor):
+                                label_dict[__key] = dist.shard_tensor(
+                                    label_dict[__key],
+                                    mesh=dist.get_mesh(),
+                                    placements=[dist.Shard(0)],
+                                )
                         _, loss, more_loss = self.wrapper(
                             **input_dict,
                             cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
