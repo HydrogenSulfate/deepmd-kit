@@ -749,15 +749,19 @@ class Trainer:
             self.optimizer.clear_grad(set_to_zero=False)
 
             with nvprof_context(enable_profiling, "Fetching data"):
-                if not hasattr(self, "input_dict"):
+                input_dict, label_dict, log_dict = self.get_data(
+                    is_train=True, task_key=task_key
+                )
+                while (
+                    input_dict["coord"].shape[0] < 32 or
+                    input_dict["atype"].shape[0] < 32 or
+                    input_dict["box"].shape[0] < 32
+                ):
                     input_dict, label_dict, log_dict = self.get_data(
                         is_train=True, task_key=task_key
                     )
-                    self.input_dict = input_dict
-                    self.label_dict = label_dict
-                    self.log_dict = log_dict
-                else:
-                    input_dict, label_dict, log_dict = self.input_dict, self.label_dict, self.log_dict
+                    print('retry')
+
 
             if SAMPLER_RECORD:
                 print_str = f"Step {_step_id}: sample system{log_dict['sid']}  frame{log_dict['fid']}\n"
@@ -795,23 +799,21 @@ class Trainer:
                 #     hpu.fused_allreduce_gradients(list(self.wrapper.parameters()), None)
                 # dist.barrier()
                 with nvprof_context(enable_profiling, "Forward pass"):
-                    if not hasattr(self, 'input_dict'):
-                        for __key in ("coord", "atype", "box"):
-                            print(f"[Trn] Input key: {__key}, shape: {input_dict[__key].shape}")
-                            input_dict[__key] = dist.shard_tensor(
-                                input_dict[__key],
+                    for __key in ("coord", "atype", "box"):
+                        print(f"[Trn] Input key: {__key}, shape: {input_dict[__key].shape}")
+                        input_dict[__key] = dist.shard_tensor(
+                            input_dict[__key],
+                            mesh=dist.get_mesh(),
+                            placements=[dist.Shard(0)],
+                        )
+                    for __key, _ in label_dict.items():
+                        print(f"[Trn] Label key: {__key}, shape: {label_dict[__key].shape}")
+                        if isinstance(label_dict[__key], paddle.Tensor):
+                            label_dict[__key] = dist.shard_tensor(
+                                label_dict[__key],
                                 mesh=dist.get_mesh(),
                                 placements=[dist.Shard(0)],
                             )
-                    if not hasattr(self, 'label_dict'):
-                        for __key, _ in label_dict.items():
-                            print(f"[Trn] Label key: {__key}, shape: {label_dict[__key].shape}")
-                            if isinstance(label_dict[__key], paddle.Tensor):
-                                label_dict[__key] = dist.shard_tensor(
-                                    label_dict[__key],
-                                    mesh=dist.get_mesh(),
-                                    placements=[dist.Shard(0)],
-                                )
                     model_pred, loss, more_loss = self.wrapper(
                         **input_dict,
                         cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
