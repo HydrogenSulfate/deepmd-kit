@@ -34,7 +34,7 @@ if os.environ.get("DEVICE") == "cpu" or paddle.device.cuda.device_count() <= 0:
 else:
     DEVICE = f"gpu:{LOCAL_RANK}"
 
-paddle.device.set_device(DEVICE)
+# paddle.device.set_device(DEVICE)
 
 
 def to_bool(flag: int | bool | str) -> bool:
