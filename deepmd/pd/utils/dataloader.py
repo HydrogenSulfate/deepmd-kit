@@ -219,7 +219,7 @@ class DpLoaderSet(Dataset):
         self.iters = []
 
         for item in self.dataloaders:
-            self.iters.append(LazyIter(item))
+            self.iters.append(iter(item))
 
     def set_noise(self, noise_settings):
         # noise_settings['noise_type'] # "trunc_normal", "normal", "uniform"
