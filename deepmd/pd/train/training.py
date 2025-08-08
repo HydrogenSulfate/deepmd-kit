@@ -786,7 +786,7 @@ class Trainer:
                 # details in https://github.com/PaddlePaddle/Paddle/issues/48898#issuecomment-1343838622
                 # if self.world_size > 1:
                 #     hpu.fused_allreduce_gradients(list(self.wrapper.parameters()), None)
-
+                dist.barrier()
                 with nvprof_context(enable_profiling, "Forward pass"):
                     for __key in ("coord", "atype", "box"):
                         print(f"Input key: {__key}, shape: {input_dict[__key].shape}")
