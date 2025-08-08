@@ -795,21 +795,23 @@ class Trainer:
                 #     hpu.fused_allreduce_gradients(list(self.wrapper.parameters()), None)
                 # dist.barrier()
                 with nvprof_context(enable_profiling, "Forward pass"):
-                    for __key in ("coord", "atype", "box"):
-                        print(f"[Trn] Input key: {__key}, shape: {input_dict[__key].shape}")
-                        input_dict[__key] = dist.shard_tensor(
-                            input_dict[__key],
-                            mesh=dist.get_mesh(),
-                            placements=[dist.Shard(0)],
-                        )
-                    for __key, _ in label_dict.items():
-                        print(f"[Trn] Label key: {__key}, shape: {label_dict[__key].shape}")
-                        if isinstance(label_dict[__key], paddle.Tensor):
-                            label_dict[__key] = dist.shard_tensor(
-                                label_dict[__key],
+                    if not hasattr(self, 'input_dict'):
+                        for __key in ("coord", "atype", "box"):
+                            print(f"[Trn] Input key: {__key}, shape: {input_dict[__key].shape}")
+                            input_dict[__key] = dist.shard_tensor(
+                                input_dict[__key],
                                 mesh=dist.get_mesh(),
                                 placements=[dist.Shard(0)],
                             )
+                    if not hasattr(self, 'label_dict'):
+                        for __key, _ in label_dict.items():
+                            print(f"[Trn] Label key: {__key}, shape: {label_dict[__key].shape}")
+                            if isinstance(label_dict[__key], paddle.Tensor):
+                                label_dict[__key] = dist.shard_tensor(
+                                    label_dict[__key],
+                                    mesh=dist.get_mesh(),
+                                    placements=[dist.Shard(0)],
+                                )
                     model_pred, loss, more_loss = self.wrapper(
                         **input_dict,
                         cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
