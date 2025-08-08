@@ -193,8 +193,8 @@ class DpLoaderSet(Dataset):
                 num_workers=0,  # Should be 0 to avoid too many threads forked
                 batch_sampler=system_batch_sampler,
                 collate_fn=collate_batch,
-                # use_buffer_reader=False,
-                # places=["cpu"],
+                use_buffer_reader=False,
+                places=["cpu"],
             )
             self.dataloaders.append(system_dataloader)
             self.index.append(len(system_dataloader))
