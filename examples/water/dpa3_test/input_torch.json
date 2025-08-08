@@ -75,7 +75,7 @@
         "../data/data_1",
         "../data/data_2"
       ],
-      "batch_size": 8,
+      "batch_size": 32,
       "_comment": "that's all"
     },
     "validation_data": {
