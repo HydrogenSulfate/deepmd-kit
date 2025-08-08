@@ -749,9 +749,16 @@ class Trainer:
             self.optimizer.clear_grad(set_to_zero=False)
 
             with nvprof_context(enable_profiling, "Fetching data"):
-                input_dict, label_dict, log_dict = self.get_data(
-                    is_train=True, task_key=task_key
-                )
+                if not hasattr(self, "input_dict"):
+                    input_dict, label_dict, log_dict = self.get_data(
+                        is_train=True, task_key=task_key
+                    )
+                    self.input_dict = input_dict
+                    self.label_dict = label_dict
+                    self.log_dict = log_dict
+                else:
+                    input_dict, label_dict, log_dict = self.input_dict, self.label_dict, self.log_dict
+
             if SAMPLER_RECORD:
                 print_str = f"Step {_step_id}: sample system{log_dict['sid']}  frame{log_dict['fid']}\n"
                 fout1.write(print_str)

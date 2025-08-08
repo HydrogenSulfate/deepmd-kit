@@ -185,7 +185,7 @@ class DpLoaderSet(Dataset):
                     (not (dist.is_available() and dist.is_initialized()))
                     and shuffle
                 ),
-                batch_size=int(batch_size),
+                batch_size=int(32),
             )
             self.sampler_list.append(system_batch_sampler)
             system_dataloader = DataLoader(
