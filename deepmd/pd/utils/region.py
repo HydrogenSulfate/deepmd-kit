@@ -76,7 +76,8 @@ def to_face_distance(
 
 
 def b_to_face_distance(cell):
-    volume = paddle.linalg.det(cell)
+    with paddle.device("cpu"):
+        volume = paddle.linalg.det(cell.cpu())
     c_yz = paddle.cross(cell[:, 1], cell[:, 2], axis=-1)
     _h2yz = volume / paddle.linalg.norm(c_yz, axis=-1)
     c_zx = paddle.cross(cell[:, 2], cell[:, 0], axis=-1)

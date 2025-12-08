@@ -136,6 +136,7 @@ class Trainer:
         self.acc_freq: int = training_params.get(
             "acc_freq", 1
         )  # gradient accumulation steps
+        log.info(f"Using gradient accumulation with acc_freq = {self.acc_freq}.")
         self.disp_file = training_params.get("disp_file", "lcurve.out")
         self.disp_freq = training_params.get("disp_freq", 1000)
         self.save_ckpt = training_params.get("save_ckpt", "model.ckpt")
@@ -780,7 +781,7 @@ class Trainer:
                         )
 
                     with nvprof_context(enable_profiling, "Backward pass"):
-                        loss.backward()
+                        (loss / self.acc_freq).backward()
 
                 # gradient accumulation
                 if (_step_id + 1) % self.acc_freq == 0:
