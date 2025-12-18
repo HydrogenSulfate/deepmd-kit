@@ -60,5 +60,5 @@ EAGER_COMP_OP_BLACK_LIST = [
 ]
 EAGER_COMP_OP_BLACK_LIST = list(set(EAGER_COMP_OP_BLACK_LIST))
 
-paddle.framework.core.set_eprim_eager_enabled(True)
+paddle.framework.core.set_prim_eager_enabled(True)
 paddle.framework.core._set_prim_backward_blacklist(*EAGER_COMP_OP_BLACK_LIST)
