@@ -29,10 +29,10 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Environment :: GPU :: NVIDIA CUDA :: 12 :: 12.2",
     "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Physics",
@@ -55,7 +55,7 @@ dependencies = [
     'mendeleev',
     'array-api-compat',
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["deepmd"]
 
 [project.entry-points."lammps.plugins"]
@@ -117,16 +117,6 @@ ipi = [
 gui = [
     "dpgui",
 ]
-cu11 = [
-    "nvidia-cuda-runtime-cu11",
-    "nvidia-cublas-cu11",
-    "nvidia-cufft-cu11",
-    "nvidia-curand-cu11",
-    "nvidia-cusolver-cu11",
-    "nvidia-cusparse-cu11",
-    "nvidia-cudnn-cu11<9",
-    "nvidia-cuda-nvcc-cu11",
-]
 cu12 = [
     "nvidia-cuda-runtime-cu12",
     "nvidia-cublas-cu12",
@@ -162,7 +152,7 @@ dev = [
 pin_tensorflow_cpu = [
   # https://github.com/tensorflow/tensorflow/issues/75279
   # macos x86 has been deprecated
-  "tensorflow-cpu~=2.18.0; platform_machine=='x86_64' and platform_system == 'Linux'",
+  "tensorflow-cpu>=2.18,<2.21; platform_machine=='x86_64' and platform_system == 'Linux'",
   "tensorflow~=2.18.0; (platform_machine!='x86_64' or platform_system != 'Linux') and (platform_machine!='x86_64' or platform_system != 'Darwin')",
   "tensorflow; platform_machine=='x86_64' and platform_system == 'Darwin'",
 ]
@@ -176,7 +166,7 @@ pin_pytorch_cpu = [
   "torch; platform_machine=='x86_64' and platform_system == 'Darwin'",
 ]
 pin_pytorch_gpu = [
-  "torch>=2.7,<2.9",
+  "torch>=2.7,<2.10",
 ]
 pin_jax = [
   "jax==0.5.0;python_version>='3.10'",
@@ -255,9 +245,7 @@ test-command = [
 test-extras = ["cpu", "test", "lmp", "ipi", "torch", "paddle"]
 build = ["cp311-*"]
 skip = ["*-win32", "*-manylinux_i686", "*-musllinux*"]
-# TODO: uncomment to use the latest image when CUDA 11 is deprecated
-# manylinux-x86_64-image = "manylinux_2_28"
-manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:2022-11-19-1b19e81"
+manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.macos]
@@ -289,15 +277,9 @@ environment-pass = [
 ]
 before-all = [
     """if [ ! -z "${DP_PKG_NAME}" ]; then sed -i "s/name = \\"deepmd-kit\\"/name = \\"${DP_PKG_NAME}\\"/g" pyproject.toml; fi""",
-    # https://almalinux.org/blog/2023-12-20-almalinux-8-key-update/
-    """rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux""",
     """{ if [ "$(uname -m)" = "x86_64" ] ; then yum config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo && yum install -y cuda-nvcc-${CUDA_VERSION/./-} cuda-cudart-devel-${CUDA_VERSION/./-}; fi }""",
-    # uv is not available in the old manylinux image
-    """{ if [ "$(uname -m)" = "x86_64" ] ; then pipx install uv; fi }""",
 ]
 before-build = [
-    # old build doesn't support uv
-    """{ if [ "$(uname -m)" = "x86_64" ] ; then uv pip install --system -U build; fi }""",
 ]
 [tool.cibuildwheel.linux.environment]
 PIP_PREFER_BINARY = "1"
