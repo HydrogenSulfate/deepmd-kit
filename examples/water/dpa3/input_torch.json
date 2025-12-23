@@ -69,6 +69,7 @@
   },
   "training": {
     "stat_file": "./dpa3.hdf5",
+    "acc_freq": 1000,
     "training_data": {
       "systems": [
         "../data/data_0",
@@ -85,7 +86,7 @@
       "batch_size": 1,
       "_comment": "that's all"
     },
-    "numb_steps": 1000000,
+    "numb_steps": 1000,
     "warmup_steps": 0,
     "gradient_max_norm": 5.0,
     "seed": 10,
