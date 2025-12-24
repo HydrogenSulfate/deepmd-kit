@@ -2,6 +2,9 @@
 from collections.abc import (
     Callable,
 )
+from typing import (
+    Any,
+)
 
 import paddle
 
@@ -120,7 +123,7 @@ class DescrptDPA3(BaseDescriptor, paddle.nn.Layer):
     ) -> None:
         super().__init__()
 
-        def init_subclass_params(sub_data, sub_class):
+        def init_subclass_params(sub_data: Any, sub_class: Any) -> Any:
             if isinstance(sub_data, dict):
                 return sub_class(**sub_data)
             elif isinstance(sub_data, sub_class):
@@ -302,7 +305,9 @@ class DescrptDPA3(BaseDescriptor, paddle.nn.Layer):
         """Returns the protection of building environment matrix."""
         return self.repflows.get_env_protection()
 
-    def share_params(self, base_class, shared_level, resume=False) -> None:
+    def share_params(
+        self, base_class: Any, shared_level: int, resume: bool = False
+    ) -> None:
         """
         Share the parameters of self to the base_class with shared_level during multitask training.
         If not start from checkpoint (resume is False),
@@ -359,11 +364,11 @@ class DescrptDPA3(BaseDescriptor, paddle.nn.Layer):
         repflow["dstd"] = repflow["dstd"][remap_index]
 
     @property
-    def dim_out(self):
+    def dim_out(self) -> int:
         return self.get_dim_out()
 
     @property
-    def dim_emb(self):
+    def dim_emb(self) -> int:
         """Returns the embedding dimension g2."""
         return self.get_dim_emb()
 
@@ -544,11 +549,15 @@ class DescrptDPA3(BaseDescriptor, paddle.nn.Layer):
         if self.concat_output_tebd:
             node_ebd = paddle.concat([node_ebd, node_ebd_inp], axis=-1)
         return (
-            node_ebd.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            rot_mat.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            edge_ebd.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            h2.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            sw.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
+            node_ebd.astype(env.GLOBAL_PD_FLOAT_PRECISION),
+            rot_mat.astype(env.GLOBAL_PD_FLOAT_PRECISION)
+            if rot_mat is not None
+            else None,
+            edge_ebd.astype(env.GLOBAL_PD_FLOAT_PRECISION)
+            if edge_ebd is not None
+            else None,
+            h2.astype(env.GLOBAL_PD_FLOAT_PRECISION) if h2 is not None else None,
+            sw.astype(env.GLOBAL_PD_FLOAT_PRECISION) if sw is not None else None,
         )
 
     @classmethod

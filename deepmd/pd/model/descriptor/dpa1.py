@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-from collections.abc import (
-    Callable,
+from __future__ import (
+    annotations,
+)
+
+from typing import (
+    TYPE_CHECKING,
+    Any,
 )
 
 import paddle
@@ -26,15 +31,9 @@ from deepmd.pd.utils.env import (
 from deepmd.pd.utils.update_sel import (
     UpdateSel,
 )
-from deepmd.utils.data_system import (
-    DeepmdDataSystem,
-)
 from deepmd.utils.finetune import (
     get_index_between_two_maps,
     map_pair_exclude_types,
-)
-from deepmd.utils.path import (
-    DPPath,
 )
 from deepmd.utils.version import (
     check_version_compatibility,
@@ -50,6 +49,18 @@ from .se_atten import (
     DescrptBlockSeAtten,
     NeighborGatedAttention,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import (
+        Callable,
+    )
+
+    from deepmd.utils.data_system import (
+        DeepmdDataSystem,
+    )
+    from deepmd.utils.path import (
+        DPPath,
+    )
 
 
 @BaseDescriptor.register("dpa1")
@@ -228,8 +239,8 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
         exclude_types: list[tuple[int, int]] = [],
         env_protection: float = 0.0,
         scaling_factor: int = 1.0,
-        normalize=True,
-        temperature=None,
+        normalize: bool = True,
+        temperature: float | None = None,
         concat_output_tebd: bool = True,
         trainable: bool = True,
         trainable_ln: bool = True,
@@ -242,7 +253,7 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
         use_tebd_bias: bool = False,
         type_map: list[str] | None = None,
         # not implemented
-        spin=None,
+        spin: Any | None = None,
         type: str | None = None,
     ) -> None:
         super().__init__()
@@ -295,12 +306,13 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
         self.use_econf_tebd = use_econf_tebd
         self.use_tebd_bias = use_tebd_bias
         self.type_map = type_map
+        self.tebd_compress = False
         if type_map is not None:
             self.register_buffer(
                 "buffer_type_map",
                 paddle.to_tensor([ord(c) for c in " ".join(type_map)]),
             )
-        self.compress = False
+        self.geo_compress = False
         self.type_embedding = TypeEmbedNet(
             ntypes,
             tebd_dim,
@@ -397,7 +409,9 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
         """Returns the protection of building environment matrix."""
         return self.se_atten.get_env_protection()
 
-    def share_params(self, base_class, shared_level, resume=False) -> None:
+    def share_params(
+        self, base_class: Any, shared_level: int, resume: bool = False
+    ) -> None:
         """
         Share the parameters of self to the base_class with shared_level during multitask training.
         If not start from checkpoint (resume is False),
@@ -425,18 +439,18 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
             raise NotImplementedError
 
     @property
-    def dim_out(self):
+    def dim_out(self) -> int:
         return self.get_dim_out()
 
     @property
-    def dim_emb(self):
+    def dim_emb(self) -> int:
         return self.get_dim_emb()
 
     def compute_input_stats(
         self,
         merged: Callable[[], list[dict]] | list[dict],
         path: DPPath | None = None,
-    ):
+    ) -> None:
         """
         Compute the input statistics (e.g. mean and stddev) for the descriptors from packed data.
 
@@ -469,7 +483,7 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
         return self.se_atten.mean, self.se_atten.stddev
 
     def change_type_map(
-        self, type_map: list[str], model_with_new_type_stat=None
+        self, type_map: list[str], model_with_new_type_stat: Any | None = None
     ) -> None:
         """Change the type related params to new ones, according to `type_map` and the original one in the model.
         If there are new types in `type_map`, statistics will be updated accordingly to `model_with_new_type_stat` for these new types.
@@ -549,7 +563,7 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
         return data
 
     @classmethod
-    def deserialize(cls, data: dict) -> "DescrptDPA1":
+    def deserialize(cls, data: dict) -> DescrptDPA1:
         data = data.copy()
         check_version_compatibility(data.pop("@version"), 2, 1)
         data.pop("@class")
@@ -569,7 +583,7 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
             data["use_tebd_bias"] = True
         obj = cls(**data)
 
-        def t_cvt(xx):
+        def t_cvt(xx: Any) -> paddle.Tensor:
             return paddle.to_tensor(xx, dtype=obj.se_atten.prec).to(device=env.DEVICE)
 
         obj.type_embedding.embedding = TypeEmbedNetConsistent.deserialize(
@@ -610,7 +624,7 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
         check_frequency
             The overflow check frequency
         """
-        # do some checks before the mocel compression process
+        # do some checks before the model compression process
         raise ValueError("Compression is already enabled.")
 
     def forward(
@@ -620,7 +634,13 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
         nlist: paddle.Tensor,
         mapping: paddle.Tensor | None = None,
         comm_dict: list[paddle.Tensor] | None = None,
-    ):
+    ) -> tuple[
+        paddle.Tensor,
+        paddle.Tensor | None,
+        paddle.Tensor | None,
+        paddle.Tensor | None,
+        paddle.Tensor | None,
+    ]:
         """Compute the descriptor.
 
         Parameters
@@ -677,10 +697,12 @@ class DescrptDPA1(BaseDescriptor, paddle.nn.Layer):
 
         return (
             g1.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            rot_mat.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
+            rot_mat.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION)
+            if rot_mat is not None
+            else None,
             g2.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION) if g2 is not None else None,
-            h2.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            sw.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
+            h2.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION) if h2 is not None else None,
+            sw.to(dtype=env.GLOBAL_PD_FLOAT_PRECISION) if sw is not None else None,
         )
 
     @classmethod

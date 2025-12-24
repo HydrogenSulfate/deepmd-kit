@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-from collections.abc import (
-    Callable,
+from __future__ import (
+    annotations,
+)
+
+from typing import (
+    TYPE_CHECKING,
+    Any,
 )
 
 import paddle
@@ -38,15 +43,9 @@ from deepmd.pd.utils.update_sel import (
 from deepmd.pd.utils.utils import (
     to_numpy_array,
 )
-from deepmd.utils.data_system import (
-    DeepmdDataSystem,
-)
 from deepmd.utils.finetune import (
     get_index_between_two_maps,
     map_pair_exclude_types,
-)
-from deepmd.utils.path import (
-    DPPath,
 )
 from deepmd.utils.version import (
     check_version_compatibility,
@@ -70,6 +69,18 @@ from .se_atten import (
 from .se_t_tebd import (
     DescrptBlockSeTTebd,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import (
+        Callable,
+    )
+
+    from deepmd.utils.data_system import (
+        DeepmdDataSystem,
+    )
+    from deepmd.utils.path import (
+        DPPath,
+    )
 
 
 @BaseDescriptor.register("dpa2")
@@ -400,7 +411,9 @@ class DescrptDPA2(BaseDescriptor, paddle.nn.Layer):
         # the env_protection of repinit is the same as that of the repformer
         return self.repinit.get_env_protection()
 
-    def share_params(self, base_class, shared_level, resume=False) -> None:
+    def share_params(
+        self, base_class: Any, shared_level: int, resume: bool = False
+    ) -> None:
         """
         Share the parameters of self to the base_class with shared_level during multitask training.
         If not start from checkpoint (resume is False),
@@ -491,11 +504,11 @@ class DescrptDPA2(BaseDescriptor, paddle.nn.Layer):
             repinit_three_body["dstd"] = repinit_three_body["dstd"][remap_index]
 
     @property
-    def dim_out(self):
+    def dim_out(self) -> int:
         return self.get_dim_out()
 
     @property
-    def dim_emb(self):
+    def dim_emb(self) -> int:
         """Returns the embedding dimension g2."""
         return self.get_dim_emb()
 
@@ -635,7 +648,7 @@ class DescrptDPA2(BaseDescriptor, paddle.nn.Layer):
         return data
 
     @classmethod
-    def deserialize(cls, data: dict) -> "DescrptDPA2":
+    def deserialize(cls, data: dict) -> DescrptDPA2:
         data = data.copy()
         version = data.pop("@version")
         check_version_compatibility(version, 3, 1)
@@ -672,7 +685,7 @@ class DescrptDPA2(BaseDescriptor, paddle.nn.Layer):
         if obj.repinit.dim_out != obj.repformers.dim_in:
             obj.g1_shape_tranform = MLPLayer.deserialize(g1_shape_tranform)
 
-        def t_cvt(xx):
+        def t_cvt(xx: Any) -> paddle.Tensor:
             return paddle.to_tensor(xx, dtype=obj.repinit.prec, place=env.DEVICE)
 
         # deserialize repinit
@@ -727,7 +740,13 @@ class DescrptDPA2(BaseDescriptor, paddle.nn.Layer):
         nlist: paddle.Tensor,
         mapping: paddle.Tensor | None = None,
         comm_dict: list[paddle.Tensor] | None = None,
-    ):
+    ) -> tuple[
+        paddle.Tensor,
+        paddle.Tensor | None,
+        paddle.Tensor | None,
+        paddle.Tensor | None,
+        paddle.Tensor | None,
+    ]:
         """Compute the descriptor.
 
         Parameters
@@ -839,10 +858,12 @@ class DescrptDPA2(BaseDescriptor, paddle.nn.Layer):
             g1 = paddle.concat([g1, g1_inp], axis=-1)
         return (
             g1.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            rot_mat.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            g2.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            h2.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
-            sw.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION),
+            rot_mat.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION)
+            if rot_mat is not None
+            else None,
+            g2.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION) if g2 is not None else None,
+            h2.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION) if h2 is not None else None,
+            sw.astype(dtype=env.GLOBAL_PD_FLOAT_PRECISION) if sw is not None else None,
         )
 
     @classmethod
@@ -921,5 +942,5 @@ class DescrptDPA2(BaseDescriptor, paddle.nn.Layer):
         check_frequency
             The overflow check frequency
         """
-        # do some checks before the mocel compression process
+        # do some checks before the model compression process
         raise ValueError("Compression is already enabled.")

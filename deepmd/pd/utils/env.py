@@ -35,6 +35,7 @@ else:
     DEVICE = paddle.device.get_device()
 
 paddle.device.set_device(DEVICE)
+paddle.set_flags({"FLAGS_use_stride_compute_kernel": False})
 
 
 def to_bool(flag: int | bool | str) -> bool:
