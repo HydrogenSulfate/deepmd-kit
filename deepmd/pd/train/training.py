@@ -859,7 +859,7 @@ class Trainer:
 
                 if not self.multi_task:
                     train_results = log_loss_train(loss, more_loss)
-                    valid_results = log_loss_valid()
+                    valid_results = {}
                     if self.rank == 0:
                         log.info(
                             format_training_message_per_task(
@@ -918,7 +918,7 @@ class Trainer:
                                         learning_rate=None,
                                     )
                                 )
-                self.wrapper.train()
+                # self.wrapper.train()
 
                 current_time = time.time()
                 train_time = current_time - self.t0
