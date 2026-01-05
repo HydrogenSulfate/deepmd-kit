@@ -354,11 +354,11 @@ def get_generator(
             )
         else:
             # return none for compability in different devices
-            warnings.warn(
-                f"DEVICE is {DEVICE}, which is not supported. Returning None.",
-                category=UserWarning,
-                stacklevel=2,
-            )
+            # warnings.warn(
+            #     f"DEVICE is {DEVICE}, which is not supported. Returning None.",
+            #     category=UserWarning,
+            #     stacklevel=2,
+            # )
             return None
             # raise ValueError("DEVICE should be cpu or gpu or gpu:x or xpu or xpu:x")
         generator.manual_seed(seed)
