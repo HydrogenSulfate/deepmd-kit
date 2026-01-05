@@ -705,15 +705,15 @@ class Trainer:
         self.profiling_file = training_params.get("profiling_file", "timeline.json")
 
     def run(self) -> None:
-        fout = (
-            open(
-                self.disp_file,
-                mode="w" if not self.restart_training else "a",
-                buffering=1,
-            )
-            if self.rank == 0
-            else None
-        )  # line buffered
+        # fout = (
+        #     open(
+        #         self.disp_file,
+        #         mode="w" if not self.restart_training else "a",
+        #         buffering=1,
+        #     )
+        #     if self.rank == 0
+        #     else None
+        # )  # line buffered
         if SAMPLER_RECORD:
             record_file = f"Sample_rank_{self.rank}.txt"
             fout1 = open(record_file, mode="w", buffering=1)
@@ -748,10 +748,10 @@ class Trainer:
             cur_lr = _lr.value(_step_id)
             pref_lr = cur_lr
 
-            with nvprof_context(enable_profiling, "Fetching data"):
-                input_dict, label_dict, log_dict = self.get_data(
-                    is_train=True, task_key=task_key
-                )
+            # with nvprof_context(enable_profiling, "Fetching data"):
+            input_dict, label_dict, log_dict = self.get_data(
+                is_train=True, task_key=task_key
+            )
             if SAMPLER_RECORD:
                 print_str = f"Step {_step_id}: sample system{log_dict['sid']}  frame{log_dict['fid']}\n"
                 fout1.write(print_str)
@@ -771,16 +771,16 @@ class Trainer:
                     else contextlib.nullcontext
                 )
                 with no_sync_context():
-                    with nvprof_context(enable_profiling, "Forward pass"):
-                        model_pred, loss, more_loss = self.wrapper(
-                            **input_dict,
-                            cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
-                            label=label_dict,
-                            task_key=task_key,
-                        )
+                    # with nvprof_context(enable_profiling, "Forward pass"):
+                    model_pred, loss, more_loss = self.wrapper(
+                        **input_dict,
+                        cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
+                        label=label_dict,
+                        task_key=task_key,
+                    )
 
-                    with nvprof_context(enable_profiling, "Backward pass"):
-                        loss.backward()
+                    # with nvprof_context(enable_profiling, "Backward pass"):
+                    loss.backward()
 
                 # gradient accumulation
                 if (_step_id + 1) % self.acc_freq == 0:
@@ -792,15 +792,15 @@ class Trainer:
                         )
 
                     if self.gradient_max_norm > 0.0:
-                        with nvprof_context(enable_profiling, "Gradient clip"):
-                            paddle.nn.utils.clip_grad_norm_(
-                                self.wrapper.parameters(),
-                                self.gradient_max_norm,
-                                error_if_nonfinite=True,
-                            )
+                        # with nvprof_context(enable_profiling, "Gradient clip"):
+                        paddle.nn.utils.clip_grad_norm_(
+                            self.wrapper.parameters(),
+                            self.gradient_max_norm,
+                            error_if_nonfinite=True,
+                        )
 
-                    with nvprof_context(enable_profiling, "Adam update"):
-                        self.optimizer.step()
+                    # with nvprof_context(enable_profiling, "Adam update"):
+                    self.optimizer.step()
                     self.optimizer.clear_grad(set_to_zero=False)
                     self.scheduler.step()
 
@@ -943,25 +943,25 @@ class Trainer:
                 ):
                     self.total_train_time += train_time
 
-                if fout:
-                    if self.lcurve_should_print_header:
-                        self.print_header(fout, train_results, valid_results)
-                        self.lcurve_should_print_header = False
-                    self.print_on_training(
-                        fout, display_step_id, cur_lr, train_results, valid_results
-                    )
+                # if fout:
+                #     if self.lcurve_should_print_header:
+                #         self.print_header(fout, train_results, valid_results)
+                #         self.lcurve_should_print_header = False
+                #     self.print_on_training(
+                #         fout, display_step_id, cur_lr, train_results, valid_results
+                #     )
 
-            if (
-                ((_step_id + 1) % self.save_freq == 0 and _step_id != self.start_step)
-                or (_step_id + 1) == self.num_steps
-            ) and (self.rank == 0 or dist.get_rank() == 0):
-                # Handle the case if rank 0 aborted and re-assigned
-                self.latest_model = Path(self.save_ckpt + f"-{_step_id + 1}.pd")
-                self.save_model(self.latest_model, lr=cur_lr, step=_step_id)
-                log.info(f"Saved model to {self.latest_model}")
-                symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
-                with open("checkpoint", "w") as f:
-                    f.write(str(self.latest_model))
+            # if (
+            #     ((_step_id + 1) % self.save_freq == 0 and _step_id != self.start_step)
+            #     or (_step_id + 1) == self.num_steps
+            # ) and (self.rank == 0 or dist.get_rank() == 0):
+            #     # Handle the case if rank 0 aborted and re-assigned
+            #     self.latest_model = Path(self.save_ckpt + f"-{_step_id + 1}.pd")
+            #     self.save_model(self.latest_model, lr=cur_lr, step=_step_id)
+            #     log.info(f"Saved model to {self.latest_model}")
+            #     symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
+            #     with open("checkpoint", "w") as f:
+            #         f.write(str(self.latest_model))
 
             # tensorboard
             if self.enable_tensorboard and (
@@ -985,39 +985,39 @@ class Trainer:
             if JIT:
                 break
 
-        if self.change_bias_after_training and (self.rank == 0 or dist.get_rank() == 0):
-            if not self.multi_task:
-                self.model = model_change_out_bias(
-                    self.model,
-                    self.get_sample_func,
-                    _bias_adjust_mode="change-by-statistic",
-                )
-            else:
-                for model_key in self.model_keys:
-                    self.model[model_key] = model_change_out_bias(
-                        self.model[model_key],
-                        self.get_sample_func[model_key],
-                        _bias_adjust_mode="change-by-statistic",
-                    )
-            self.latest_model = Path(self.save_ckpt + f"-{self.num_steps}.pd")
-            cur_lr = self.lr_exp.value(self.num_steps - 1)
-            self.save_model(self.latest_model, lr=cur_lr, step=self.num_steps - 1)
-            log.info(f"Saved model to {self.latest_model}")
-            symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
-            with open("checkpoint", "w") as f:
-                f.write(str(self.latest_model))
+        # if self.change_bias_after_training and (self.rank == 0 or dist.get_rank() == 0):
+        #     if not self.multi_task:
+        #         self.model = model_change_out_bias(
+        #             self.model,
+        #             self.get_sample_func,
+        #             _bias_adjust_mode="change-by-statistic",
+        #         )
+        #     else:
+        #         for model_key in self.model_keys:
+        #             self.model[model_key] = model_change_out_bias(
+        #                 self.model[model_key],
+        #                 self.get_sample_func[model_key],
+        #                 _bias_adjust_mode="change-by-statistic",
+        #             )
+        #     self.latest_model = Path(self.save_ckpt + f"-{self.num_steps}.pd")
+        #     cur_lr = self.lr_exp.value(self.num_steps - 1)
+        #     self.save_model(self.latest_model, lr=cur_lr, step=self.num_steps - 1)
+        #     log.info(f"Saved model to {self.latest_model}")
+        #     symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
+        #     with open("checkpoint", "w") as f:
+        #         f.write(str(self.latest_model))
 
         if (
-            self.rank == 0 or dist.get_rank() == 0
+            self.rank == 0
         ):  # Handle the case if rank 0 aborted and re-assigned
-            if self.num_steps == 0:
-                # when num_steps is 0, the checkpoint is never not saved
-                self.latest_model = Path(self.save_ckpt + "-0.pd")
-                self.save_model(self.latest_model, lr=0, step=0)
-                log.info(f"Saved model to {self.latest_model}")
-                symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
-                with open("checkpoint", "w") as f:
-                    f.write(str(self.latest_model))
+            # if self.num_steps == 0:
+            #     # when num_steps is 0, the checkpoint is never not saved
+            #     self.latest_model = Path(self.save_ckpt + "-0.pd")
+            #     self.save_model(self.latest_model, lr=0, step=0)
+            #     log.info(f"Saved model to {self.latest_model}")
+            #     symlink_prefix_files(self.latest_model.stem, self.save_ckpt)
+            #     with open("checkpoint", "w") as f:
+            #         f.write(str(self.latest_model))
 
             elapsed_batch = self.num_steps - self.start_step
             if self.timing_in_training and elapsed_batch // self.disp_freq > 0:
@@ -1044,8 +1044,8 @@ class Trainer:
                 )
             log.info(f"Trained model has been saved to: {self.save_ckpt}")
 
-        if fout:
-            fout.close()
+        # if fout:
+        #     fout.close()
         if SAMPLER_RECORD:
             fout1.close()
         if self.enable_tensorboard:

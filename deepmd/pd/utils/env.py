@@ -19,7 +19,7 @@ from deepmd.env import (
     set_default_nthreads,
 )
 
-SAMPLER_RECORD = os.environ.get("SAMPLER_RECORD", False)
+SAMPLER_RECORD = False
 try:
     # only linux
     ncpus = len(os.sched_getaffinity(0))
