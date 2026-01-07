@@ -840,12 +840,13 @@ class Trainer:
                         if input_dict == {}:
                             # no validation data
                             return {}
-                        _, loss, more_loss = self.wrapper(
-                            **input_dict,
-                            cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
-                            label=label_dict,
-                            task_key=_task_key,
-                        )
+                        with no_sync_context():
+                            _, loss, more_loss = self.wrapper(
+                                **input_dict,
+                                cur_lr=paddle.full([], pref_lr, DEFAULT_PRECISION),
+                                label=label_dict,
+                                task_key=_task_key,
+                            )
                         # more_loss.update({"rmse": math.sqrt(loss)})
                         natoms = int(input_dict["atype"].shape[-1])
                         sum_natoms += natoms
